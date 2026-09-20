@@ -1,0 +1,24 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Environment and secrets
+.env
+*.env.local
+
+# Video & Raw Data
+data/raw/*
+!data/raw/.gitkeep
+data/samples/*.mp4
+data/samples/*.avi
+
+# IDE
+.vscode/
+.idea/
+*.swp
