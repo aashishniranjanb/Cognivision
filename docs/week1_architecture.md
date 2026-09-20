@@ -1,35 +1,56 @@
-﻿# Week 1 Architecture — Stream Ingestion & Decoupled Buffer
+﻿# Week 1 System Architecture: Ingestion & Telemetry
 
 ```
-CCTV / Camera Sources
- (Webcam / RTSP / Video file / Synthetic Mock)
-      │
-      ▼
-┌───────────────────────────────────────────────┐
-│ Threaded StreamReader (app/camera/stream_reader)│
-│  - Background grab thread (cv2.VideoCapture)  │
-│  - FPS calculation (input rate)               │
-│  - Health watchdog & auto-reconnection        │
-└───────────────────────┬───────────────────────┘
-                        │
-                        ▼ (push frame + timestamp)
-┌───────────────────────────────────────────────┐
-│ Decoupled FrameBuffer (app/buffer/frame_buffer)│
-│  - Thread-safe ring buffer (Bounded: ~30)     │
-│  - Drop-oldest policy (prevents stale backlog)│
-│  - Drop-counter & End-to-end Latency metrics  │
-└───────────────────────┬───────────────────────┘
-                        │
-                        ▼ (pop latest frame)
-┌───────────────────────────────────────────────┐
-│ Consumer / Inference Queue (app/pipeline)     │
-│  - Process frames asynchronously              │
-│  - Overlay HUD diagnostic telemetry           │
-│  - Prepares feed for Person Detection (Week 2)│
-└───────────────────────────────────────────────┘
+                  ┌──────────────────────────────┐
+                  │        VIDEO SOURCES         │
+                  └──────────────┬───────────────┘
+                                 │
+                 ┌───────────────┴───────────────┐
+                 │                               │
+                 ▼                               ▼
+       [ Laptop Webcam (0) ]         [ Video File (.mp4) ]
+                 │                               │
+                 └───────────────┬───────────────┘
+                                 ▼
+                     ┌───────────────────────┐
+                     │   app/camera/source   │
+                     │      VideoSource      │
+                     └───────────┬───────────┘
+                                 │
+                                 ▼
+                     ┌───────────────────────┐
+                     │        Decoder        │
+                     │    (cv2.VideoCapture) │
+                     └───────────┬───────────┘
+                                 │
+                                 ▼
+                     ┌───────────────────────┐
+                     │ app/pipeline/frame_q  │
+                     │  FrameBuffer (max=30) │
+                     │  (Drop-Oldest Policy) │
+                     └───────────┬───────────┘
+                                 │
+                                 ▼
+                     ┌───────────────────────┐
+                     │    Inference Queue    │
+                     │   (Decoupled Worker)  │
+                     └───────────┬───────────┘
+                                 │
+                                 ▼
+                     ┌───────────────────────┐
+                     │  Live Preview Window  │
+                     │  (960x540 + HUD Panel)│
+                     └───────────┬───────────┘
+                                 │
+                  ┌──────────────┴──────────────┐
+                  ▼                             ▼
+       ┌─────────────────────┐       ┌─────────────────────┐
+       │ Ingestion Telemetry │       │ Structured Logs &   │
+       │ (FPS, Latency, Q)   │       │ Event Stream        │
+       └─────────────────────┘       └─────────────────────┘
 ```
 
-## Why Decoupled Buffering is Critical
-
-1. **RTSP Buffer Bleed**: Without non-blocking threaded ingestion, a slow inference step (e.g. 15 FPS) will cause OpenCV/FFmpeg to buffer socket data in OS network buffers, introducing seconds of artificial lag.
-2. **Drop-Oldest Strategy**: Real-time attendance requires current frames. If processing falls behind, dropping historical uninspected frames ensures the system always processes real-time events.
+## Key Invariants
+1. **Threaded Decoupling**: Frame ingestion runs independently from the rendering/inference loop to prevent blocking.
+2. **Drop-Oldest Queue Policy**: Guarantees real-time streaming by discarding oldest unconsumed frames when buffer overflows.
+3. **Pluggable Source Design**: Any OpenCV-supported source (webcam index, file path, RTSP URL) can be passed into `VideoSource` without changing the rest of the application.
