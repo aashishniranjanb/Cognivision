@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SRM AI Attendance System — Executive Live Dashboard</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card-bg: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --heading: #f0f6fc;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --orange: #d29922;
+      --red: #f85149;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 24px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 16px;
+    }
+    h1 { font-size: 1.5rem; color: var(--heading); display: flex; align-items: center; gap: 12px; }
+    .badge-live {
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--green);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .stat-title { font-size: 0.85rem; color: #8b949e; text-transform: uppercase; font-weight: 600; }
+    .stat-value { font-size: 2rem; font-weight: 700; color: var(--heading); margin-top: 8px; }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .card h2 { font-size: 1.1rem; color: var(--heading); margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+
+    .classroom-row {
+      margin-bottom: 16px;
+    }
+    .classroom-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+    }
+    .progress-bar-bg {
+      background: #21262d;
+      height: 12px;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    .events-feed {
+      height: 280px;
+      overflow-y: auto;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 0.85rem;
+    }
+    .event-item {
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      justify-content: space-between;
+    }
+    .event-in { color: var(--green); }
+    .event-out { color: var(--orange); }
+    .event-exc { color: var(--red); }
+
+    .student-lookup {
+      margin-top: 16px;
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+    }
+    .student-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 0.85rem;
+    }
+    .student-table th, .student-table td {
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>SRM AI ATTENDANCE SYSTEM <span class="badge-live"><span class="pulse-dot"></span> LIVE ENGINE</span></h1>
+    <div id="connStatus" style="font-size: 0.85rem; color: #8b949e;">Connecting WebSocket...</div>
+  </header>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-title">Total Enrolled</div>
+      <div class="stat-value" id="valEnrolled">500</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">Present Campus (Inside)</div>
+      <div class="stat-value" id="valInside" style="color: var(--green);">300</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">Outside Campus</div>
+      <div class="stat-value" id="valOutside">200</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">Accepted Events</div>
+      <div class="stat-value" id="valEvents" style="color: var(--accent);">700</div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <div class="card">
+      <h2>CLASSROOM OCCUPANCY STATUS (5 CLASSROOMS / 10 CAMERAS)</h2>
+      <div id="classroomList">
+        <!-- Injected via WebSocket -->
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>AUDITED EVENT STREAM</h2>
+      <div class="events-feed" id="eventsFeed">
+        <!-- Injected via WebSocket -->
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>STUDENT BIOMETRIC VERIFICATION & PERIOD ATTENDANCE (STU001)</h2>
+    <div class="student-lookup" id="studentLookupCard">
+      <div style="display: flex; gap: 24px; margin-bottom: 12px;">
+        <div><strong>Student ID:</strong> STU001</div>
+        <div><strong>Name:</strong> Aditi Rao</div>
+        <div><strong>Department:</strong> Electronics & Communication (ECE)</div>
+        <div><strong>Current Status:</strong> <span style="color: var(--green); font-weight: 700;">INSIDE</span></div>
+      </div>
+      <table class="student-table">
+        <thead>
+          <tr style="background: #161b22;">
+            <th>Period</th>
+            <th>Subject</th>
+            <th>Scheduled Interval</th>
+            <th>Audited Presence</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="periodTableBody">
+          <tr>
+            <td>P1</td>
+            <td>VLSI Design & Embedded Systems</td>
+            <td>09:00 - 09:50</td>
+            <td>48m 12s</td>
+            <td style="color: var(--green); font-weight: 700;">PRESENT</td>
+          </tr>
+          <tr>
+            <td>P2</td>
+            <td>Signals & DSP Lecture</td>
+            <td>10:00 - 10:50</td>
+            <td>47m 05s</td>
+            <td style="color: var(--green); font-weight: 700;">PRESENT</td>
+          </tr>
+          <tr>
+            <td>P3</td>
+            <td>Computer Vision & Deep Learning</td>
+            <td>11:00 - 11:50</td>
+            <td>49m 30s</td>
+            <td style="color: var(--green); font-weight: 700;">PRESENT</td>
+          </tr>
+          <tr>
+            <td>P4</td>
+            <td>Robotics & Microcontrollers</td>
+            <td>13:00 - 13:50</td>
+            <td>00m 00s</td>
+            <td style="color: var(--red); font-weight: 700;">ABSENT</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const wsUrl = `ws://${window.location.host}/ws/dashboard`;
+    let ws;
+
+    function connectWs() {
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        document.getElementById('connStatus').innerHTML = '<span style="color: #3fb950;">● Connected (Real-Time)</span>';
+      };
+
+      ws.onmessage = (msg) => {
+        const payload = JSON.parse(msg.data);
+        if (payload.type === 'INITIAL_STATE') {
+          renderTelemetry(payload.telemetry);
+          if (payload.recent_events) {
+            payload.recent_events.forEach(addEventLine);
+          }
+        } else if (payload.type === 'HEARTBEAT') {
+          renderTelemetry(payload.telemetry);
+        } else if (payload.type === 'NEW_EVENT') {
+          addEventLine(payload.event);
+          if (payload.summary) {
+            document.getElementById('valInside').innerText = payload.summary.present_campus;
+            document.getElementById('valOutside').innerText = payload.summary.outside_campus;
+          }
+        }
+      };
+
+      ws.onclose = () => {
+        document.getElementById('connStatus').innerHTML = '<span style="color: #f85149;">Disconnected. Reconnecting...</span>';
+        setTimeout(connectWs, 2000);
+      };
+    }
+
+    function renderTelemetry(t) {
+      if (!t) return;
+      if (t.summary) {
+        document.getElementById('valEnrolled').innerText = t.summary.total_enrolled || 500;
+        document.getElementById('valInside').innerText = t.summary.present_campus || 300;
+        document.getElementById('valOutside').innerText = t.summary.outside_campus || 200;
+      }
+      if (t.accepted_events !== undefined) {
+        document.getElementById('valEvents').innerText = t.accepted_events;
+      }
+
+      if (t.classrooms) {
+        const container = document.getElementById('classroomList');
+        container.innerHTML = '';
+        Object.entries(t.classrooms).forEach(([cid, room]) => {
+          const row = document.createElement('div');
+          row.className = 'classroom-row';
+          row.innerHTML = `
+            <div class="classroom-header">
+              <span><strong>${cid}</strong> — ${room.name}</span>
+              <span>${room.occupancy} / ${room.capacity} (${room.occupancy_pct}%)</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" style="width: ${Math.min(100, room.occupancy_pct)}%;"></div>
+            </div>
+          `;
+          container.appendChild(row);
+        });
+      }
+    }
+
+    function addEventLine(evt) {
+      const feed = document.getElementById('eventsFeed');
+      const item = document.createElement('div');
+      item.className = 'event-item';
+
+      let clrClass = 'event-in';
+      if (evt.event_type === 'OUT') clrClass = 'event-out';
+      else if (evt.event_type && evt.event_type.startsWith('EXC')) clrClass = 'event-exc';
+
+      const timeStr = evt.timestamp_iso ? evt.timestamp_iso.substring(11, 19) : new Date().toLocaleTimeString();
+      item.innerHTML = `
+        <span>${timeStr} <strong>${evt.student_id || 'UNKNOWN'}</strong> [${evt.classroom_id}]</span>
+        <span class="${clrClass}"><strong>${evt.event_type}</strong> (${(evt.confidence * 100).toFixed(0)}%)</span>
+      `;
+      feed.insertBefore(item, feed.firstChild);
+
+      if (feed.children.length > 50) {
+        feed.removeChild(feed.lastChild);
+      }
+    }
+
+    connectWs();
+  </script>
+</body>
+</html>
+
