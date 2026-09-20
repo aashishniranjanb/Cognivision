@@ -1,0 +1,50 @@
+﻿{
+  "campus_id": "SRM_KTR_CAMPUS",
+  "classrooms": [
+    {
+      "id": "CLASSROOM_101",
+      "name": "VLSI Design & Embedded Lab",
+      "capacity": 100,
+      "cameras": {
+        "entry": {"id": "ENTRY_101", "source": "mock", "direction": "IN", "line_y": 180},
+        "exit": {"id": "EXIT_101", "source": "mock", "direction": "OUT", "line_y": 180}
+      }
+    },
+    {
+      "id": "CLASSROOM_203",
+      "name": "Signals & DSP Lecture Hall",
+      "capacity": 100,
+      "cameras": {
+        "entry": {"id": "ENTRY_203", "source": "mock", "direction": "IN", "line_y": 180},
+        "exit": {"id": "EXIT_203", "source": "mock", "direction": "OUT", "line_y": 180}
+      }
+    },
+    {
+      "id": "CLASSROOM_305",
+      "name": "Computer Vision & AI Center",
+      "capacity": 100,
+      "cameras": {
+        "entry": {"id": "ENTRY_305", "source": "mock", "direction": "IN", "line_y": 180},
+        "exit": {"id": "EXIT_305", "source": "mock", "direction": "OUT", "line_y": 180}
+      }
+    },
+    {
+      "id": "CLASSROOM_402",
+      "name": "Robotics & Microcontrollers",
+      "capacity": 100,
+      "cameras": {
+        "entry": {"id": "ENTRY_402", "source": "mock", "direction": "IN", "line_y": 180},
+        "exit": {"id": "EXIT_402", "source": "mock", "direction": "OUT", "line_y": 180}
+      }
+    },
+    {
+      "id": "CLASSROOM_501",
+      "name": "Advanced Computing Auditorium",
+      "capacity": 100,
+      "cameras": {
+        "entry": {"id": "ENTRY_501", "source": "mock", "direction": "IN", "line_y": 180},
+        "exit": {"id": "EXIT_501", "source": "mock", "direction": "OUT", "line_y": 180}
+      }
+    }
+  ]
+}

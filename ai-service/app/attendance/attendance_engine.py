@@ -1,4 +1,4 @@
-﻿"""Comprehensive Attendance Engine: Coordinates Line Crossing, Event Deduplication, Duration, and Audit Logging."""
+"""Comprehensive Attendance Engine: Coordinates Line Crossing, Event Deduplication, Duration, and Audit Logging."""
 import time
 import uuid
 import json
@@ -41,7 +41,8 @@ class AttendanceEngine:
         student_id: Optional[str],
         centroid: Tuple[int, int],
         confidence: float,
-        is_confirmed: bool
+        is_confirmed: bool,
+        timestamp: Optional[float] = None
     ) -> Optional[AttendanceEvent]:
         """Checks spatial crossing and emits deduplicated attendance event if identity is confirmed."""
         direction = self.crossing_detector.check_crossing(track_id, centroid)
@@ -53,7 +54,7 @@ class AttendanceEngine:
             print(f"[AttendanceEngine] Line crossed by Track {track_id} ({direction}), but identity is not confirmed. Event withheld.")
             return None
 
-        now = time.time()
+        now = timestamp if timestamp is not None else time.time()
         iso_str = datetime.fromtimestamp(now).strftime("%Y-%m-%dT%H:%M:%S")
         event_id = f"EVT-{uuid.uuid4().hex[:8].upper()}"
 

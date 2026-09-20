@@ -1,4 +1,4 @@
-﻿"""Scale Benchmark Suite: Evaluates FAISS Vector Retrieval and Adaptive Fusion Latency from 5 to 100 Students."""
+"""Scale Benchmark Suite: Evaluates FAISS Vector Retrieval and Adaptive Fusion Latency from 5 to 100 Students."""
 import faiss
 import numpy as np
 import time
@@ -66,5 +66,22 @@ def run_scaling_benchmarks():
     print("=" * 65)
     return results
 
+def benchmark_phase2_scale(n_students: int = 500, vectors_per_student: int = 5, query_count: int = 2000) -> dict:
+    """Week 6 Phase-II Scale: 500 Enrolled Students (2,500 512-D vectors in FAISS)."""
+    print("=" * 70)
+    print(f" WEEK 6 PHASE-II: {n_students} STUDENTS / 5 CLASSROOMS VECTOR RETRIEVAL SCALE")
+    print("=" * 70)
+    res = benchmark_scale(n_students=n_students, vectors_per_student=vectors_per_student, query_count=query_count)
+    print(f"  Enrolled Students   : {res['enrolled_students']}")
+    print(f"  Total Index Vectors : {res['total_vectors']}")
+    print(f"  Index Construction  : {res['index_build_ms']} ms")
+    print(f"  Vector Search Latency: {res['search_latency_us']} µs")
+    print(f"  Throughput          : {res['throughput_qps']:.1f} QPS")
+    print(f"  Process Memory RSS  : {res['memory_rss_mb']} MB")
+    print("=" * 70)
+    return res
+
 if __name__ == "__main__":
     run_scaling_benchmarks()
+    benchmark_phase2_scale()
+
