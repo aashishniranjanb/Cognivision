@@ -1,0 +1,47 @@
+{
+  "STU001": {
+    "student_id": "STU001",
+    "name": "Aashish Kumar",
+    "department": "ECE",
+    "year": 4,
+    "active": true,
+    "enrolled_at": null,
+    "embedding_count": 5
+  },
+  "STU002": {
+    "student_id": "STU002",
+    "name": "Priya Sharma",
+    "department": "ECE",
+    "year": 4,
+    "active": true,
+    "enrolled_at": null,
+    "embedding_count": 4
+  },
+  "STU003": {
+    "student_id": "STU003",
+    "name": "Rahul Verma",
+    "department": "CSE",
+    "year": 4,
+    "active": true,
+    "enrolled_at": null,
+    "embedding_count": 4
+  },
+  "STU004": {
+    "student_id": "STU004",
+    "name": "Sneha Patel",
+    "department": "ECE",
+    "year": 4,
+    "active": true,
+    "enrolled_at": null,
+    "embedding_count": 4
+  },
+  "STU005": {
+    "student_id": "STU005",
+    "name": "Vikram Singh",
+    "department": "MECH",
+    "year": 4,
+    "active": true,
+    "enrolled_at": null,
+    "embedding_count": 4
+  }
+}
