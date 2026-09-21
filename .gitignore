@@ -1,4 +1,4 @@
-﻿# Python
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -17,8 +17,13 @@ data/raw/*
 !data/raw/.gitkeep
 data/samples/*.mp4
 data/samples/*.avi
+data/attendance_records/
+audit/
+*.db
+*.jsonl
 
 # IDE
 .vscode/
 .idea/
 *.swp
+

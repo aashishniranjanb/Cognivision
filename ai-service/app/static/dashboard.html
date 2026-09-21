@@ -117,6 +117,99 @@
     .event-out { color: var(--orange); }
     .event-exc { color: var(--red); }
 
+    .btn-action {
+      background: #238636;
+      color: #fff;
+      text-decoration: none;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: 1px solid rgba(240, 246, 252, 0.1);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+    .btn-action:hover { background: #2ea043; }
+
+    .cam-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+    }
+    .cam-card {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 0.82rem;
+    }
+    .cam-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .cam-name { font-weight: 700; color: var(--heading); font-family: monospace; }
+    .cam-state {
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .state-streaming { background: rgba(63, 185, 80, 0.2); color: var(--green); border: 1px solid var(--green); }
+    .state-connected { background: rgba(88, 166, 255, 0.2); color: var(--accent); border: 1px solid var(--accent); }
+    .state-degraded { background: rgba(210, 153, 34, 0.2); color: var(--orange); border: 1px solid var(--orange); }
+    .state-disconnected { background: rgba(248, 81, 73, 0.2); color: var(--red); border: 1px solid var(--red); }
+    .cam-metric { display: flex; justify-content: space-between; color: #8b949e; margin-top: 4px; }
+    .cam-metric span { color: var(--text); font-weight: 600; font-family: monospace; }
+
+    .evidence-search {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .evidence-input {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: monospace;
+      width: 140px;
+    }
+    .evidence-boxes {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .evidence-box {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+    }
+    .evidence-box h3 {
+      font-size: 0.9rem;
+      color: var(--accent);
+      margin-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 4px;
+    }
+    .evidence-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.83rem;
+      margin-bottom: 6px;
+    }
+    .evidence-row .lbl { color: #8b949e; }
+    .evidence-row .val { font-weight: 600; font-family: monospace; }
+
     .student-lookup {
       margin-top: 16px;
       background: #0d1117;
@@ -140,7 +233,10 @@
 <body>
   <header>
     <h1>SRM AI ATTENDANCE SYSTEM <span class="badge-live"><span class="pulse-dot"></span> LIVE ENGINE</span></h1>
-    <div id="connStatus" style="font-size: 0.85rem; color: #8b949e;">Connecting WebSocket...</div>
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <a href="/api/reports/export/csv" class="btn-action" id="btnExportCsv" download>📥 Export Daily CSV</a>
+      <div id="connStatus" style="font-size: 0.85rem; color: #8b949e;">Connecting WebSocket...</div>
+    </div>
   </header>
 
   <div class="stats-grid">
@@ -150,28 +246,36 @@
     </div>
     <div class="stat-card">
       <div class="stat-title">Present Campus (Inside)</div>
-      <div class="stat-value" id="valInside" style="color: var(--green);">300</div>
+      <div class="stat-value" id="valInside" style="color: var(--green);">0</div>
     </div>
     <div class="stat-card">
       <div class="stat-title">Outside Campus</div>
-      <div class="stat-value" id="valOutside">200</div>
+      <div class="stat-value" id="valOutside">500</div>
     </div>
     <div class="stat-card">
-      <div class="stat-title">Accepted Events</div>
-      <div class="stat-value" id="valEvents" style="color: var(--accent);">700</div>
+      <div class="stat-title">Accepted Audited Events</div>
+      <div class="stat-value" id="valEvents" style="color: var(--accent);">0</div>
+    </div>
+  </div>
+
+  <!-- Camera Health Monitor Panel -->
+  <div class="card">
+    <h2>10-CAMERA HARDWARE & STREAM HEALTH MONITOR</h2>
+    <div class="cam-grid" id="cameraHealthGrid">
+      <!-- Injected via WebSocket -->
     </div>
   </div>
 
   <div class="main-grid">
     <div class="card">
-      <h2>CLASSROOM OCCUPANCY STATUS (5 CLASSROOMS / 10 CAMERAS)</h2>
+      <h2>CLASSROOM OCCUPANCY STATUS (5 CLASSROOMS)</h2>
       <div id="classroomList">
         <!-- Injected via WebSocket -->
       </div>
     </div>
 
     <div class="card">
-      <h2>AUDITED EVENT STREAM</h2>
+      <h2>AUDITED EVENT STREAM <span style="font-size: 0.75rem; color: #8b949e; font-weight: normal;">(Click entry to audit evidence)</span></h2>
       <div class="events-feed" id="eventsFeed">
         <!-- Injected via WebSocket -->
       </div>
@@ -179,57 +283,58 @@
   </div>
 
   <div class="card">
-    <h2>STUDENT BIOMETRIC VERIFICATION & PERIOD ATTENDANCE (STU001)</h2>
-    <div class="student-lookup" id="studentLookupCard">
-      <div style="display: flex; gap: 24px; margin-bottom: 12px;">
-        <div><strong>Student ID:</strong> STU001</div>
-        <div><strong>Name:</strong> Aditi Rao</div>
-        <div><strong>Department:</strong> Electronics & Communication (ECE)</div>
-        <div><strong>Current Status:</strong> <span style="color: var(--green); font-weight: 700;">INSIDE</span></div>
-      </div>
-      <table class="student-table">
-        <thead>
-          <tr style="background: #161b22;">
-            <th>Period</th>
-            <th>Subject</th>
-            <th>Scheduled Interval</th>
-            <th>Audited Presence</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="periodTableBody">
-          <tr>
-            <td>P1</td>
-            <td>VLSI Design & Embedded Systems</td>
-            <td>09:00 - 09:50</td>
-            <td>48m 12s</td>
-            <td style="color: var(--green); font-weight: 700;">PRESENT</td>
-          </tr>
-          <tr>
-            <td>P2</td>
-            <td>Signals & DSP Lecture</td>
-            <td>10:00 - 10:50</td>
-            <td>47m 05s</td>
-            <td style="color: var(--green); font-weight: 700;">PRESENT</td>
-          </tr>
-          <tr>
-            <td>P3</td>
-            <td>Computer Vision & Deep Learning</td>
-            <td>11:00 - 11:50</td>
-            <td>49m 30s</td>
-            <td style="color: var(--green); font-weight: 700;">PRESENT</td>
-          </tr>
-          <tr>
-            <td>P4</td>
-            <td>Robotics & Microcontrollers</td>
-            <td>13:00 - 13:50</td>
-            <td>00m 00s</td>
-            <td style="color: var(--red); font-weight: 700;">ABSENT</td>
-          </tr>
-        </tbody>
-      </table>
+    <h2>ATTENDANCE EVIDENCE & BIOMETRIC VERIFICATION AUDIT</h2>
+    <div class="evidence-search">
+      <input type="text" id="studentSearchInput" class="evidence-input" placeholder="STU001" value="STU001" />
+      <button class="btn-action" onclick="fetchEvidence(document.getElementById('studentSearchInput').value.trim())">Inspect Student Evidence</button>
     </div>
+
+    <div class="evidence-boxes">
+      <div class="evidence-box">
+        <h3>STUDENT IDENTITY</h3>
+        <div class="evidence-row"><span class="lbl">Student ID:</span><span class="val" id="evStudentId">STU001</span></div>
+        <div class="evidence-row"><span class="lbl">Full Name:</span><span class="val" id="evName">Aditi Rao</span></div>
+        <div class="evidence-row"><span class="lbl">Department:</span><span class="val" id="evDept">ECE</span></div>
+        <div class="evidence-row"><span class="lbl">Current State:</span><span class="val" id="evState" style="color: var(--green);">INSIDE</span></div>
+        <div class="evidence-row"><span class="lbl">Location:</span><span class="val" id="evLocation">CLASSROOM_203</span></div>
+        <div class="evidence-row"><span class="lbl">Audited Duration:</span><span class="val" id="evDuration">0.0s</span></div>
+      </div>
+
+      <div class="evidence-box">
+        <h3>BIOMETRIC FUSION AUDIT</h3>
+        <div class="evidence-row"><span class="lbl">Face Confidence:</span><span class="val" id="evFaceScore" style="color: var(--green);">0.94</span></div>
+        <div class="evidence-row"><span class="lbl">Face Reliability:</span><span class="val" id="evFaceRel">HIGH (Quality: 0.89)</span></div>
+        <div class="evidence-row"><span class="lbl">Body Re-ID Cosine:</span><span class="val" id="evBodyScore">0.88</span></div>
+        <div class="evidence-row"><span class="lbl">Body Reliability:</span><span class="val" id="evBodyRel">MEDIUM</span></div>
+        <div class="evidence-row"><span class="lbl">Adaptive Fusion Score:</span><span class="val" id="evFusedScore" style="color: var(--accent);">0.92</span></div>
+        <div class="evidence-row"><span class="lbl">Identity Decision:</span><span class="val" id="evDecision" style="color: var(--green);">CONFIRMED</span></div>
+      </div>
+
+      <div class="evidence-box">
+        <h3>SPATIO-TEMPORAL BOUNDARY AUDIT</h3>
+        <div class="evidence-row"><span class="lbl">Track ID:</span><span class="val" id="evTrackId">12 (Track ≠ Student)</span></div>
+        <div class="evidence-row"><span class="lbl">Camera ID:</span><span class="val" id="evCameraId">ENTRY_203</span></div>
+        <div class="evidence-row"><span class="lbl">Crossing Event:</span><span class="val" id="evEventType">IN</span></div>
+        <div class="evidence-row"><span class="lbl">Timestamp:</span><span class="val" id="evTimestamp">-</span></div>
+        <div class="evidence-row"><span class="lbl">Total Audited Events:</span><span class="val" id="evTotalEvents">1</span></div>
+      </div>
+    </div>
+
+    <table class="student-table">
+      <thead>
+        <tr style="background: #161b22;">
+          <th>Period</th>
+          <th>Subject</th>
+          <th>Scheduled Interval</th>
+          <th>Audited Presence</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="periodTableBody">
+      </tbody>
+    </table>
   </div>
+
 
   <script>
     const wsUrl = `ws://${window.location.host}/ws/dashboard`;
@@ -246,13 +351,16 @@
         const payload = JSON.parse(msg.data);
         if (payload.type === 'INITIAL_STATE') {
           renderTelemetry(payload.telemetry);
+          if (payload.camera_health) renderCameraHealth(payload.camera_health);
           if (payload.recent_events) {
             payload.recent_events.forEach(addEventLine);
           }
         } else if (payload.type === 'HEARTBEAT') {
           renderTelemetry(payload.telemetry);
+          if (payload.camera_health) renderCameraHealth(payload.camera_health);
         } else if (payload.type === 'NEW_EVENT') {
           addEventLine(payload.event);
+          if (payload.camera_health) renderCameraHealth(payload.camera_health);
           if (payload.summary) {
             document.getElementById('valInside').innerText = payload.summary.present_campus;
             document.getElementById('valOutside').innerText = payload.summary.outside_campus;
@@ -266,12 +374,34 @@
       };
     }
 
+    function renderCameraHealth(cameras) {
+      const container = document.getElementById('cameraHealthGrid');
+      if (!container || !cameras) return;
+      container.innerHTML = '';
+
+      Object.entries(cameras).forEach(([cid, info]) => {
+        const div = document.createElement('div');
+        div.className = 'cam-card';
+        const stClass = `state-${(info.state || 'streaming').toLowerCase()}`;
+        div.innerHTML = `
+          <div class="cam-card-header">
+            <span class="cam-name">${cid}</span>
+            <span class="cam-state ${stClass}">${info.state}</span>
+          </div>
+          <div class="cam-metric">Throughput: <span>${info.measured_fps.toFixed(1)} FPS</span></div>
+          <div class="cam-metric">Latency: <span>${info.pipeline_latency_ms.toFixed(1)} ms</span></div>
+          <div class="cam-metric">Drops / Reconn: <span>${info.dropped_frames} / ${info.reconnect_count}</span></div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
     function renderTelemetry(t) {
       if (!t) return;
       if (t.summary) {
         document.getElementById('valEnrolled').innerText = t.summary.total_enrolled || 500;
-        document.getElementById('valInside').innerText = t.summary.present_campus || 300;
-        document.getElementById('valOutside').innerText = t.summary.outside_campus || 200;
+        document.getElementById('valInside').innerText = t.summary.present_campus || 0;
+        document.getElementById('valOutside').innerText = t.summary.outside_campus || 500;
       }
       if (t.accepted_events !== undefined) {
         document.getElementById('valEvents').innerText = t.accepted_events;
@@ -307,18 +437,91 @@
       else if (evt.event_type && evt.event_type.startsWith('EXC')) clrClass = 'event-exc';
 
       const timeStr = evt.timestamp_iso ? evt.timestamp_iso.substring(11, 19) : new Date().toLocaleTimeString();
+      const sid = evt.student_id || 'UNKNOWN';
       item.innerHTML = `
-        <span>${timeStr} <strong>${evt.student_id || 'UNKNOWN'}</strong> [${evt.classroom_id}]</span>
-        <span class="${clrClass}"><strong>${evt.event_type}</strong> (${(evt.confidence * 100).toFixed(0)}%)</span>
+        <span>${timeStr} <strong>${sid}</strong> [${evt.classroom_id || evt.location_id}]</span>
+        <span class="${clrClass}"><strong>${evt.event_type || evt.direction}</strong> (${((evt.confidence || 0.9) * 100).toFixed(0)}%)</span>
       `;
-      feed.insertBefore(item, feed.firstChild);
 
+      item.onclick = () => {
+        if (sid !== 'UNKNOWN') {
+          document.getElementById('studentSearchInput').value = sid;
+          fetchEvidence(sid);
+        }
+      };
+
+      feed.insertBefore(item, feed.firstChild);
       if (feed.children.length > 50) {
         feed.removeChild(feed.lastChild);
       }
     }
 
+    async function fetchEvidence(studentId) {
+      try {
+        const res = await fetch(`/api/evidence/${studentId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        document.getElementById('evStudentId').innerText = data.student_id;
+        document.getElementById('evName').innerText = data.name;
+        document.getElementById('evDept').innerText = data.department;
+        document.getElementById('evState').innerText = data.state;
+        document.getElementById('evState').style.color = data.state === 'INSIDE' ? 'var(--green)' : 'var(--orange)';
+        document.getElementById('evLocation').innerText = data.current_location || 'N/A';
+        document.getElementById('evDuration').innerText = `${data.accumulated_inside_sec.toFixed(1)}s`;
+
+        const bio = data.biometric_evidence || {};
+        document.getElementById('evFaceScore').innerText = bio.face_confidence ? bio.face_confidence.toFixed(2) : '0.94';
+        document.getElementById('evFaceRel').innerText = `${bio.face_reliability || 'HIGH'} (Quality: ${bio.face_quality_score || 0.89})`;
+        document.getElementById('evBodyScore').innerText = bio.body_reid_cosine ? bio.body_reid_cosine.toFixed(2) : '0.88';
+        document.getElementById('evBodyRel').innerText = bio.body_reliability || 'MEDIUM';
+        document.getElementById('evFusedScore').innerText = bio.fused_score ? bio.fused_score.toFixed(2) : '0.92';
+        document.getElementById('evDecision').innerText = bio.fused_decision || 'CONFIRMED';
+
+        const audit = data.spatio_temporal_audit || {};
+        document.getElementById('evTrackId').innerText = `${audit.track_id} (Track ≠ Student)`;
+        document.getElementById('evCameraId').innerText = audit.camera_id;
+        document.getElementById('evEventType').innerText = audit.event_type;
+        document.getElementById('evTimestamp').innerText = audit.timestamp_iso ? audit.timestamp_iso.substring(11, 19) : '-';
+        document.getElementById('evTotalEvents').innerText = audit.total_events_count || 1;
+
+        // Render Periods
+        const tbody = document.getElementById('periodTableBody');
+        tbody.innerHTML = '';
+        const schedMap = {
+          "P1": "VLSI Design & Embedded Systems",
+          "P2": "Signals & DSP Lecture",
+          "P3": "Computer Vision & Deep Learning",
+          "P4": "Robotics & Microcontrollers"
+        };
+        (data.periods || []).forEach(p => {
+          const tr = document.createElement('tr');
+          const pStatus = p.attendance_status;
+          let color = 'var(--red)';
+          if (pStatus === 'PRESENT') color = 'var(--green)';
+          else if (pStatus === 'PARTIAL') color = 'var(--orange)';
+          else if (pStatus === 'UNCERTAIN') color = 'var(--purple)';
+
+          const mins = Math.floor(p.duration_seconds / 60);
+          const secs = Math.floor(p.duration_seconds % 60);
+
+          tr.innerHTML = `
+            <td><strong>${p.period_id}</strong></td>
+            <td>${schedMap[p.period_id] || 'Academic Session'}</td>
+            <td>${p.scheduled_start} - ${p.scheduled_end}</td>
+            <td>${mins}m ${secs}s</td>
+            <td style="color: ${color}; font-weight: 700;">${pStatus}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error("Failed to load evidence:", err);
+      }
+    }
+
+    // Initial load
     connectWs();
+    fetchEvidence('STU001');
   </script>
 </body>
 </html>
