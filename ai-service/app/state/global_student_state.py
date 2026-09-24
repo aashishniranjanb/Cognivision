@@ -1,4 +1,4 @@
-﻿"""Global Student State: Single Source of Truth for Student Presence across all 5 Classrooms."""
+"""Global Student State: Single Source of Truth for Student Presence across all 5 Classrooms."""
 from dataclasses import dataclass, asdict
 from typing import Dict, Optional, List
 import time
@@ -68,3 +68,6 @@ class GlobalStudentStateManager:
             "present_campus": inside,
             "outside_campus": outside
         }
+
+    def get_all_states(self) -> Dict[str, GlobalStudentState]:
+        return dict(self.students)

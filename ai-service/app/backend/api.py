@@ -64,6 +64,8 @@ report_service = ReportService(
     student_repo=student_repo,
     state_mgr=campus_manager.state_manager
 )
+from app.orchestration.demo_scenario_runner import DemoScenarioEngine
+demo_scenario_engine = DemoScenarioEngine(campus_manager=campus_manager)
 
 # Connect Event Bus -> Persistence Repository & Spring Boot Backend Adapter
 default_event_bus.subscribe("*", attendance_repo.save_event)
@@ -169,6 +171,20 @@ async def get_camera_survey(camera_id: str):
         "profile": profile.to_dict(),
         "validation": validation.to_dict()
     }
+
+@app.get("/api/demo/scenarios")
+async def get_demo_scenarios():
+    """Returns list of all available competition demo scenarios."""
+    return demo_scenario_engine.list_scenarios()
+
+@app.post("/api/demo/scenario/{scenario_id}")
+async def run_demo_scenario(scenario_id: str):
+    """Executes a live demo scenario with multi-step forensic traces."""
+    try:
+        res = demo_scenario_engine.run_scenario(scenario_id)
+        return res.to_dict()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 # Face & Biometric Recognition singletons
 face_detector = FaceDetector()

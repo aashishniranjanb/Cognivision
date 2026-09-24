@@ -142,6 +142,21 @@ class CampusManager:
                 reconnects=0
             )
 
+    @property
+    def camera_ids(self) -> List[str]:
+        ids = []
+        for c in self.classrooms.values():
+            ids.extend([c.entry_worker.camera_id, c.exit_worker.camera_id])
+        return ids
+
+    @property
+    def cameras(self) -> Dict[str, Any]:
+        cams = {}
+        for c in self.classrooms.values():
+            cams[c.entry_worker.camera_id] = c.entry_worker
+            cams[c.exit_worker.camera_id] = c.exit_worker
+        return cams
+
     def receive_event(self, event: AttendanceEvent) -> ConflictResolution:
         """Central event bus: Reconciles incoming events against contradictory flapping & impossible transitions."""
         resolution = self.reconciler.reconcile(event)

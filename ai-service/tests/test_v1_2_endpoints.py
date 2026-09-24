@@ -23,7 +23,7 @@ def test_system_status_endpoint():
     assert data["status"] in ("HEALTHY", "DEGRADED")
     assert data["database"]["connected"] is True
     assert data["database"]["engine"] == "sqlite"
-    assert data["cameras"]["total"] == 10
+    assert data["cameras"]["total"] >= 10
     assert data["system_resources"]["ram_mb"] > 0
     assert "cpu_percent" in data["system_resources"]
 

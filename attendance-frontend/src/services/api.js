@@ -71,4 +71,16 @@ export const getTodayAttendance = () =>
 export const simulateEvent = (data) =>
     aiApi.post("/events/simulate", data);
 
+export const getDemoScenarios = () =>
+    aiApi.get("/demo/scenarios");
+
+export const runDemoScenario = (scenarioId) =>
+    aiApi.post(`/demo/scenario/${scenarioId}`);
+
+export const getLossAnalysis = (cohortSize = 100) =>
+    aiApi.get(`/campus/loss_analysis?cohort_size=${cohortSize}`);
+
+export const getSystemStatus = () =>
+    aiApi.get("/system/status");
+
 export default aiApi;

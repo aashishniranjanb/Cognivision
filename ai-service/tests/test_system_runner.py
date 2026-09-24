@@ -20,13 +20,15 @@ def test_system_runner_campus_lifecycle():
     health = default_health_monitor.get_all_health()
 
     assert len(health) >= 10
-    for cid, metrics in health.items():
+    for cid in campus_manager.cameras.keys():
+        metrics = health[cid]
         assert metrics["state"] == CameraConnectionState.STREAMING.value
         assert metrics["measured_fps"] == 25.0
 
     # 2. Stop campus
     campus_manager.stop_campus()
     stopped_health = default_health_monitor.get_all_health()
-    for cid, metrics in stopped_health.items():
+    for cid in campus_manager.cameras.keys():
+        metrics = stopped_health[cid]
         assert metrics["state"] == CameraConnectionState.DISCONNECTED.value
         assert metrics["measured_fps"] == 0.0

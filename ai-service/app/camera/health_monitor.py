@@ -56,6 +56,30 @@ class CameraHealthMonitor:
     def get_all_health(self) -> Dict[str, dict]:
         return {cid: rec.to_dict() for cid, rec in self.health_records.items()}
 
+    def record_failure(self, camera_id: str, error: str = "RTSP stream lost") -> CameraHealthMetrics:
+        return self.update_metrics(
+            camera_id=camera_id,
+            state=CameraConnectionState.DISCONNECTED,
+            fps=0.0,
+            dropped=10,
+            queue_size=0,
+            latency_ms=999.0,
+            reconnects=1,
+            error=error
+        )
+
+    def record_frame(self, camera_id: str, fps: float = 25.0) -> CameraHealthMetrics:
+        return self.update_metrics(
+            camera_id=camera_id,
+            state=CameraConnectionState.STREAMING,
+            fps=fps,
+            dropped=0,
+            queue_size=1,
+            latency_ms=40.0,
+            reconnects=0,
+            error=None
+        )
+
 # Global health monitor singleton
 default_health_monitor = CameraHealthMonitor()
 
