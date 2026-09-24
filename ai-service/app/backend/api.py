@@ -672,6 +672,35 @@ async def enroll_student_endpoint(student_id: str, req: Optional[EnrollStudentRe
     )
     return result
 
+from app.face.index_manager import FaissIndexManager
+from app.face.candidate_retriever import FaissCandidateRetriever
+from app.face.candidate_verifier import CandidateVerifier
+
+faiss_index_manager = FaissIndexManager(repo=biometric_repo)
+candidate_retriever = FaissCandidateRetriever(index_manager=faiss_index_manager)
+candidate_verifier = CandidateVerifier(biometric_repo=biometric_repo)
+
+@app.post("/api/biometrics/index/rebuild")
+async def rebuild_biometrics_index():
+    stats = faiss_index_manager.rebuild_index()
+    return stats
+
+@app.get("/api/biometrics/index/stats")
+async def get_biometrics_index_stats():
+    return faiss_index_manager.get_stats()
+
+class VerifyFaceRequest(BaseModel):
+    embedding: List[float]
+    query_yaw: float = 0.0
+    top_k: int = 5
+
+@app.post("/api/biometrics/verify")
+async def verify_face_embedding(req: VerifyFaceRequest):
+    emb_arr = np.array(req.embedding, dtype=np.float32)
+    candidates = candidate_retriever.retrieve_candidates(emb_arr, top_k=req.top_k)
+    decision = candidate_verifier.verify_candidates(emb_arr, candidates, query_yaw=req.query_yaw)
+    return decision
+
 @app.get("/api/students/{student_id}", response_model=StudentProfileResponse)
 async def get_student_profile(student_id: str):
     meta = student_repo.get_student(student_id)

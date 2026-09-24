@@ -214,17 +214,44 @@ class BiometricRepository:
         self,
         student_id: str,
         template_embedding: Optional[List[float]] = None,
-        template_version: int = 1,
+        template_version: Optional[int] = None,
         enrollment_quality: float = 0.0,
         enrolled_images: int = 0,
         status: str = "READY",
-        embedding_model: str = "ArcFace-512"
+        embedding_model: str = "ArcFace-512",
+        archive_notes: Optional[str] = None
     ) -> BiometricProfileResponse:
         now = self._now()
         raw_blob = serialize_embedding(template_embedding) if template_embedding else None
 
         with self.db.get_connection() as conn:
             cursor = conn.cursor()
+            # 1. Check existing profile for version increment & archiving
+            cursor.execute("SELECT * FROM student_biometric_profiles WHERE student_id = ?", (student_id,))
+            existing = cursor.fetchone()
+
+            if existing and existing["template_embedding"] and raw_blob and template_version is None:
+                # Archive previous template version to history
+                cursor.execute("""
+                    INSERT INTO student_template_history (
+                        student_id, template_version, template_embedding,
+                        enrollment_quality, enrolled_images, created_at, notes
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    student_id,
+                    existing["template_version"],
+                    existing["template_embedding"],
+                    existing["enrollment_quality"],
+                    existing["enrolled_images"],
+                    existing["updated_at"],
+                    archive_notes or f"Archived prior to v{existing['template_version'] + 1} update"
+                ))
+                next_version = existing["template_version"] + 1
+            elif template_version is not None:
+                next_version = template_version
+            else:
+                next_version = 1
+
             cursor.execute("""
                 INSERT INTO student_biometric_profiles (
                     student_id, embedding_model, embedding_dimension, template_embedding,
@@ -239,8 +266,66 @@ class BiometricRepository:
                     embedding_model = excluded.embedding_model,
                     updated_at = excluded.updated_at
             """, (
-                student_id, embedding_model, raw_blob, template_version,
+                student_id, embedding_model, raw_blob, next_version,
                 enrollment_quality, enrolled_images, status, now
+            ))
+            conn.commit()
+
+        return self.get_biometric_profile(student_id)
+
+    def get_template_history(self, student_id: str) -> List[Any]:
+        from app.biometrics.schemas import TemplateHistoryResponse
+        with self.db.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM student_template_history
+                WHERE student_id = ?
+                ORDER BY template_version DESC
+            """, (student_id,))
+            rows = cursor.fetchall()
+            return [
+                TemplateHistoryResponse(
+                    id=r["id"],
+                    student_id=r["student_id"],
+                    template_version=r["template_version"],
+                    enrollment_quality=r["enrollment_quality"],
+                    enrolled_images=r["enrolled_images"],
+                    created_at=r["created_at"],
+                    notes=r["notes"]
+                )
+                for r in rows
+            ]
+
+    def rollback_template(self, student_id: str, target_version: int) -> Optional[BiometricProfileResponse]:
+        """Rolls back a student's biometric template to an earlier archived version."""
+        with self.db.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM student_template_history
+                WHERE student_id = ? AND template_version = ?
+            """, (student_id, target_version))
+            hist = cursor.fetchone()
+            if not hist:
+                return None
+
+            now = self._now()
+            # Upsert current profile with target historical template
+            cursor.execute("""
+                UPDATE student_biometric_profiles
+                SET template_embedding = ?,
+                    template_version = ?,
+                    enrollment_quality = ?,
+                    enrolled_images = ?,
+                    status = 'READY',
+                    updated_at = ?
+                WHERE student_id = ?
+            """, (
+                hist["template_embedding"],
+                hist["template_version"],
+                hist["enrollment_quality"],
+                hist["enrolled_images"],
+                now,
+                student_id
             ))
             conn.commit()
 
@@ -258,12 +343,13 @@ class BiometricRepository:
             cursor.execute("""
                 INSERT INTO student_embedding_variants (
                     student_id, embedding, face_width, blur_score, illumination_score,
-                    yaw, pitch, roll, detection_confidence, quality_score, source_image, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    yaw, pitch, roll, detection_confidence, quality_score, source_image, pose_type, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 student_id, raw_blob, variant_in.face_width, variant_in.blur_score,
                 variant_in.illumination_score, variant_in.yaw, variant_in.pitch, variant_in.roll,
-                variant_in.detection_confidence, variant_in.quality_score, variant_in.source_image, now
+                variant_in.detection_confidence, variant_in.quality_score, variant_in.source_image,
+                getattr(variant_in, "pose_type", "FRONTAL") or "FRONTAL", now
             ))
             variant_id = cursor.lastrowid
 
@@ -299,6 +385,7 @@ class BiometricRepository:
                 detection_confidence=row["detection_confidence"],
                 quality_score=row["quality_score"],
                 source_image=row["source_image"],
+                pose_type=row["pose_type"] if "pose_type" in row.keys() and row["pose_type"] else "FRONTAL",
                 created_at=row["created_at"]
             )
 
@@ -324,17 +411,18 @@ class BiometricRepository:
                     detection_confidence=r["detection_confidence"],
                     quality_score=r["quality_score"],
                     source_image=r["source_image"],
+                    pose_type=r["pose_type"] if "pose_type" in r.keys() and r["pose_type"] else "FRONTAL",
                     created_at=r["created_at"]
                 )
                 for r in rows
             ]
 
-    def get_variant_embeddings(self, student_id: str) -> List[Tuple[int, List[float], float]]:
-        """Returns list of (variant_id, 512-dim embedding, quality_score) for template aggregation."""
+    def get_variant_embeddings(self, student_id: str) -> List[Tuple[int, List[float], str, float]]:
+        """Returns list of (variant_id, 512-dim embedding, pose_type, quality_score) for multi-angle matching."""
         with self.db.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT id, embedding, quality_score FROM student_embedding_variants
+                SELECT id, embedding, pose_type, quality_score FROM student_embedding_variants
                 WHERE student_id = ?
                 ORDER BY quality_score DESC
             """, (student_id,))
@@ -342,7 +430,8 @@ class BiometricRepository:
             results = []
             for r in rows:
                 emb = deserialize_embedding(r["embedding"])
-                results.append((r["id"], emb, r["quality_score"]))
+                pose = r["pose_type"] if "pose_type" in r.keys() and r["pose_type"] else "FRONTAL"
+                results.append((r["id"], emb, pose, r["quality_score"]))
             return results
 
     def delete_variant(self, variant_id: int) -> bool:
@@ -376,6 +465,7 @@ class BiometricRepository:
             return None
         profile = self.get_biometric_profile(student_id)
         variants = self.list_variants(student_id)
+        history = self.get_template_history(student_id)
 
         return StudentDetailResponse(
             student_id=student.student_id,
@@ -391,5 +481,6 @@ class BiometricRepository:
             enrolled_images=student.enrolled_images,
             enrollment_quality=student.enrollment_quality,
             biometric_profile=profile,
-            variants=variants
+            variants=variants,
+            template_history=history
         )

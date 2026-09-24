@@ -56,6 +56,7 @@ class EmbeddingVariantCreate(BaseModel):
     detection_confidence: Optional[float] = Field(None, description="Face detector confidence score (0 to 1)")
     quality_score: float = Field(0.0, description="Composite enrollment quality metric (0 to 1)")
     source_image: Optional[str] = Field(None, description="Path or reference URI to source image crop")
+    pose_type: str = Field("FRONTAL", description="Pose classification: FRONTAL, LEFT_PROFILE, RIGHT_PROFILE, TILT_UP, TILT_DOWN")
 
 class EmbeddingVariantResponse(BaseModel):
     id: int
@@ -69,11 +70,22 @@ class EmbeddingVariantResponse(BaseModel):
     detection_confidence: Optional[float] = None
     quality_score: float = 0.0
     source_image: Optional[str] = None
+    pose_type: str = "FRONTAL"
     created_at: str
+
+class TemplateHistoryResponse(BaseModel):
+    id: int
+    student_id: str
+    template_version: int
+    enrollment_quality: float
+    enrolled_images: int
+    created_at: str
+    notes: Optional[str] = None
 
 class StudentDetailResponse(StudentResponse):
     biometric_profile: Optional[BiometricProfileResponse] = None
     variants: List[EmbeddingVariantResponse] = []
+    template_history: List[TemplateHistoryResponse] = []
 
 def serialize_embedding(embedding: Union[np.ndarray, List[float]]) -> bytes:
     """Serializes a 512-D float32 vector to raw binary bytes."""
