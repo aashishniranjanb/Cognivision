@@ -4,6 +4,7 @@
 # ==============================================================================
 param (
     [switch]$NoBrowser = $false,
+    [switch]$UseVite = $false,
     [string]$CameraUrl = "http://192.168.1.3:8080/video"
 )
 
@@ -15,7 +16,7 @@ Write-Host "====================================================================
 Write-Host " SRM AI CAMERA ATTENDANCE SYSTEM — UNIFIED PLATFORM LAUNCHER" -ForegroundColor Cyan
 Write-Host "======================================================================" -ForegroundColor Cyan
 
-# 0. Gracefully free ports 8000, 8080, 5173 if lingering
+# 0. Gracefully free ports 8000, 8080, 5173, 3000 if lingering
 function Free-Port($port) {
     try {
         $pids = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique
@@ -31,6 +32,7 @@ function Free-Port($port) {
 Free-Port 8000
 Free-Port 8080
 Free-Port 5173
+Free-Port 3000
 Start-Sleep -Milliseconds 500
 
 # 1. Configure Java 17 Runtime for Spring Boot Backend
@@ -65,12 +67,24 @@ if (Test-Path $jarPath) {
     $backendProcess = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "mvnw.cmd spring-boot:run" -WorkingDirectory $backendCwd -PassThru
 }
 
-# 4. Start React Vite Frontend (Port 5173)
-Write-Host "[Launcher] Starting React Vite Frontend (:5173)..." -ForegroundColor Cyan
-$frontendCwd = Join-Path $PSScriptRoot "attendance-frontend"
-$frontendProcess = Start-Process -FilePath "cmd.exe" `
-    -ArgumentList "/c", "npm run dev -- --host 0.0.0.0 --port 5173" `
-    -WorkingDirectory $frontendCwd -PassThru
+# 4. Start Frontend (Next.js by default on :3000 or Vite on :5173)
+$frontendProcess = $null
+$frontendUrl = ""
+if ($UseVite) {
+    Write-Host "[Launcher] Starting React Vite Frontend (:5173)..." -ForegroundColor Cyan
+    $frontendCwd = Join-Path $PSScriptRoot "attendance-frontend"
+    $frontendProcess = Start-Process -FilePath "cmd.exe" `
+        -ArgumentList "/c", "npm run dev -- --host 0.0.0.0 --port 5173" `
+        -WorkingDirectory $frontendCwd -PassThru
+    $frontendUrl = "http://localhost:5173/live"
+} else {
+    Write-Host "[Launcher] Starting Next.js Production Frontend (:3000)..." -ForegroundColor Cyan
+    $frontendCwd = Join-Path $PSScriptRoot "attendance-next"
+    $frontendProcess = Start-Process -FilePath "cmd.exe" `
+        -ArgumentList "/c", "npm run dev" `
+        -WorkingDirectory $frontendCwd -PassThru
+    $frontendUrl = "http://localhost:3000/live"
+}
 
 # 5. Readiness health check
 Write-Host "[Launcher] Waiting for services to become responsive..." -ForegroundColor Gray
@@ -93,13 +107,13 @@ Write-Host " ALL 3 CORE SERVICES ACTIVE & CONNECTED!" -ForegroundColor Green
 Write-Host "  • Live Camera Feed Source         : $CameraUrl" -ForegroundColor Cyan
 Write-Host "  • AI Camera Engine & Video Stream : http://localhost:8000/api/camera/stream/CAM01" -ForegroundColor Gray
 Write-Host "  • Spring Boot REST Backend        : http://localhost:8080/api/dashboard/summary" -ForegroundColor Gray
-Write-Host "  • React Live CCTV Frontend        : http://localhost:5173/live" -ForegroundColor White
+Write-Host "  • Attendance Portal ($($UseVite ? 'Vite' : 'Next.js'))  : $frontendUrl" -ForegroundColor White
 Write-Host "======================================================================" -ForegroundColor Green
 
 # 6. Launch Browser
 if (-not $NoBrowser) {
     Write-Host "[Launcher] Opening browser to Live Monitoring CCTV Dashboard..." -ForegroundColor Green
-    Start-Process "http://localhost:5173/live"
+    Start-Process $frontendUrl
 }
 
 Write-Host "`nPress ENTER or CTRL+C in this terminal window to stop all services..." -ForegroundColor Yellow
@@ -113,5 +127,6 @@ try {
     Free-Port 8000
     Free-Port 8080
     Free-Port 5173
+    Free-Port 3000
     Write-Host "[Launcher] Clean shutdown complete." -ForegroundColor Green
 }
