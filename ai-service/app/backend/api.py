@@ -5,6 +5,7 @@ import os
 import time
 from pathlib import Path
 from typing import List, Optional
+from pydantic import BaseModel
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, HTTPException, Response
 from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -636,6 +637,39 @@ async def delete_student_variant(student_id: str, variant_id: int):
 @app.post("/api/students/migrate")
 async def trigger_student_migration():
     result = run_migration()
+    return result
+
+from app.enrollment.multi_image_enrollment import MultiImageEnrollmentEngine
+enrollment_engine = MultiImageEnrollmentEngine(biometric_repo=biometric_repo)
+
+class EnrollStudentRequest(BaseModel):
+    image_paths: Optional[List[str]] = None
+    burst_count: int = 5
+    camera_source: str = "http://192.168.1.3:8080/video"
+
+@app.post("/api/students/{student_id}/enroll")
+async def enroll_student_endpoint(student_id: str, req: Optional[EnrollStudentRequest] = None):
+    student = biometric_repo.get_student(student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    burst_count = req.burst_count if req else 5
+    cam_source = req.camera_source if req else "http://192.168.1.3:8080/video"
+    paths = req.image_paths if (req and req.image_paths) else None
+
+    if not paths:
+        from app.enrollment.capture_service import EnrollmentCaptureService
+        cap_svc = EnrollmentCaptureService()
+        captured_frames = cap_svc.burst_capture(source=cam_source, student_id=student_id, count=burst_count)
+        frames_to_process = [f.image for f in captured_frames]
+    else:
+        frames_to_process = paths
+
+    result = enrollment_engine.enroll_student(
+        student_id=student_id,
+        images=frames_to_process,
+        save_to_database=True
+    )
     return result
 
 @app.get("/api/students/{student_id}", response_model=StudentProfileResponse)

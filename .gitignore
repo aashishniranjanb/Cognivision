@@ -18,6 +18,8 @@ data/raw/*
 data/samples/*.mp4
 data/samples/*.avi
 data/attendance_records/
+**/data/students/
+**/data/biometrics/
 audit/
 *.db
 *.jsonl
