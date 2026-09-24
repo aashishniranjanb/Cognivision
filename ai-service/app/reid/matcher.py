@@ -1,4 +1,4 @@
-﻿"""FAISS Vector Matcher for Student Body Re-ID Gallery."""
+"""FAISS Vector Matcher for Student Body Re-ID Gallery."""
 import faiss
 import numpy as np
 import pickle
@@ -12,6 +12,22 @@ class BodyMatchResult:
     similarity: float
     matched_vector_idx: int
 
+def _resolve_path(rel_path: str) -> Path:
+    p = Path(rel_path)
+    if p.is_absolute():
+        return p
+    here = Path(__file__).resolve()
+    candidates = [
+        p,
+        here.parent.parent.parent.parent / rel_path,
+        here.parent.parent.parent / rel_path,
+        here.parent.parent / rel_path,
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    return here.parent.parent.parent.parent / rel_path
+
 class BodyMatcher:
     def __init__(
         self,
@@ -20,8 +36,8 @@ class BodyMatcher:
         dim: int = 512
     ):
         self.dim = dim
-        self.index_file = Path(index_file)
-        self.mapping_file = Path(mapping_file)
+        self.index_file = _resolve_path(index_file)
+        self.mapping_file = _resolve_path(mapping_file)
         self.index_file.parent.mkdir(parents=True, exist_ok=True)
 
         self.index = faiss.IndexFlatIP(self.dim)

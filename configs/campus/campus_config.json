@@ -1,4 +1,4 @@
-﻿{
+{
   "campus_id": "SRM_KTR_CAMPUS",
   "classrooms": [
     {
@@ -6,8 +6,22 @@
       "name": "VLSI Design & Embedded Lab",
       "capacity": 100,
       "cameras": {
-        "entry": {"id": "ENTRY_101", "source": "mock", "direction": "IN", "line_y": 180},
-        "exit": {"id": "EXIT_101", "source": "mock", "direction": "OUT", "line_y": 180}
+        "entry": {
+          "id": "ENTRY_101",
+          "source": "mock",
+          "direction": "IN",
+          "line_y": 180,
+          "capture_zone": [[200, 100], [800, 100], [800, 450], [200, 450]],
+          "crossing_line": [[200, 300], [800, 300]]
+        },
+        "exit": {
+          "id": "EXIT_101",
+          "source": "mock",
+          "direction": "OUT",
+          "line_y": 180,
+          "capture_zone": [[200, 100], [800, 100], [800, 450], [200, 450]],
+          "crossing_line": [[200, 300], [800, 300]]
+        }
       }
     },
     {

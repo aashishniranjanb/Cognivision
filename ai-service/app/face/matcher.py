@@ -1,4 +1,4 @@
-﻿"""FAISS Vector Index & Candidate Matcher for high-speed student identity search."""
+"""FAISS Vector Index & Candidate Matcher for high-speed student identity search."""
 import faiss
 import numpy as np
 import os
@@ -13,11 +13,27 @@ class MatchResult:
     similarity: float          # Cosine similarity (-1.0 to 1.0, typical 0.0 to 1.0)
     matched_vector_idx: int
 
+def _resolve_path(rel_path: str) -> Path:
+    p = Path(rel_path)
+    if p.is_absolute():
+        return p
+    here = Path(__file__).resolve()
+    candidates = [
+        p,
+        here.parent.parent.parent.parent / rel_path,
+        here.parent.parent.parent / rel_path,
+        here.parent.parent / rel_path,
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    return here.parent.parent.parent.parent / rel_path
+
 class FaceMatcher:
     def __init__(self, index_file: str = "data/face_embeddings/face_index.faiss", mapping_file: str = "data/face_embeddings/id_mapping.pkl", dim: int = 512):
         self.dim = dim
-        self.index_file = Path(index_file)
-        self.mapping_file = Path(mapping_file)
+        self.index_file = _resolve_path(index_file)
+        self.mapping_file = _resolve_path(mapping_file)
         self.index_file.parent.mkdir(parents=True, exist_ok=True)
         
         # Inner-Product Index (exact cosine similarity when vectors are L2-normalized)

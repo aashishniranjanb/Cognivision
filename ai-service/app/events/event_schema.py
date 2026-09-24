@@ -18,6 +18,14 @@ class CampusEvent:
     student_id: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
+    @property
+    def location_id(self) -> str:
+        return self.classroom_id
+
+    @property
+    def direction(self) -> str:
+        return self.event_type
+
     def to_dict(self) -> dict:
         return asdict(self)
 

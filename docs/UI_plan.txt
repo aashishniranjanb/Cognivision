@@ -1,0 +1,836 @@
+Yes. **Now stop adding backend features for a moment and make the dashboard look like a serious institutional product.**
+
+You already have the functional dashboard, camera telemetry, evidence API, CSV export, and 34 passing tests. 
+
+The next deployment should be:
+
+# `v1.1 — Command Center UI`
+
+Not a generic admin dashboard.
+
+The UI should make the judge understand the entire system in **10 seconds**.
+
+---
+
+# 1. The design concept
+
+Call the interface:
+
+## **VISION COMMAND CENTER**
+
+Think:
+
+```text
+CCTV Control Room
++
+AI Analytics
++
+Attendance Management
++
+Investigation Console
+```
+
+Not:
+
+```text
+School Attendance Website
+```
+
+### Visual direction
+
+```text
+Dark command-center UI
+Large numbers
+Minimal cards
+Live status indicators
+Interactive classroom map
+Camera panels
+Timeline
+Student evidence drawer
+Exception alerts
+```
+
+Use a restrained palette:
+
+```text
+Background      #0B1020
+Panel           #111827
+Primary         #2563EB
+Success         #10B981
+Warning         #F59E0B
+Danger          #EF4444
+Text            #F8FAFC
+Muted           #94A3B8
+```
+
+Avoid excessive gradients, glowing AI effects, animated backgrounds, etc.
+
+---
+
+# 2. Main screen
+
+Your current dashboard should become:
+
+```text
+┌────────────────────────────────────────────────────────────────────┐
+│ VISION COMMAND CENTER                          ● SYSTEM ONLINE     │
+│ SRM • AI Video Attendance                         09:42:18         │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  ENROLLED       INSIDE        PRESENT       EXCEPTIONS             │
+│     500           312            296             4                 │
+│                                                                    │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│              CAMPUS OCCUPANCY                                     │
+│                                                                    │
+│   CLASS 101       CLASS 203       CLASS 301       CLASS 401       │
+│   58 / 60         54 / 60         47 / 50         61 / 65         │
+│   ● NORMAL        ● NORMAL        ● NORMAL        ● NORMAL        │
+│                                                                    │
+├────────────────────────────────────────────────────────────────────┤
+│ LIVE MOVEMENT                     │ SYSTEM HEALTH                 │
+│                                  │                                │
+│ STU034 → CLASS203 IN             │ Cameras     10 / 10            │
+│ STU127 → CLASS101 IN             │ FPS         24.7               │
+│ STU083 → CLASS301 OUT            │ CPU         67%                │
+│ UNKNOWN → CLASS203               │ RAM         443 MB             │
+│                                  │ Events      312/min            │
+└──────────────────────────────────┴─────────────────────────────────┘
+```
+
+---
+
+# 3. But the secret is the interaction
+
+Don't make every card clickable.
+
+Make **five major interaction surfaces**.
+
+---
+
+## INTERACTION 1 — Classroom cards
+
+Click:
+
+```text
+CLASSROOM 203
+54 / 60
+```
+
+and open a side drawer.
+
+```text
+┌─────────────────────────────────────┐
+│ CLASSROOM 203                   ×   │
+├─────────────────────────────────────┤
+│                                     │
+│ Occupancy                           │
+│ ███████████████████░░ 54 / 60       │
+│                                     │
+│ PRESENT        51                   │
+│ PARTIAL         2                   │
+│ UNKNOWN         1                   │
+│                                     │
+│ ─────────────────────────────────── │
+│                                     │
+│ LIVE STUDENTS                       │
+│                                     │
+│ ● STU001   Present   42m            │
+│ ● STU002   Present   38m            │
+│ ● STU003   Partial   19m            │
+│ ● STU004   Present   41m            │
+│                                     │
+│ [View Cameras] [View Attendance]    │
+└─────────────────────────────────────┘
+```
+
+No page navigation.
+
+**Everything happens in-place.**
+
+---
+
+# 4. INTERACTION 2 — Click a student
+
+This should be your killer UI.
+
+Click:
+
+```text
+STU001
+```
+
+Open a full evidence drawer:
+
+```text
+┌──────────────────────────────────────────┐
+│ STUDENT EVIDENCE                    ×    │
+├──────────────────────────────────────────┤
+│                                          │
+│  STU001                                  │
+│  ● CONFIRMED                             │
+│                                          │
+│  ┌─────────────┐                         │
+│  │             │                         │
+│  │ Best Frame  │                         │
+│  │             │                         │
+│  └─────────────┘                         │
+│                                          │
+│ IDENTITY                                 │
+│ Face similarity        0.94              │
+│ Face reliability       0.91              │
+│ Body similarity        0.82              │
+│ Body reliability       0.78              │
+│                                          │
+│ FUSION                                   │
+│ Face      █████████████░  61%            │
+│ Body      ████████░░░░░  39%             │
+│                                          │
+│ MOVEMENT                                 │
+│ Track ID              #17                │
+│ Camera                C203_ENTRY         │
+│ Direction             IN                 │
+│ Time                  09:02:14           │
+│                                          │
+│ ATTENDANCE                               │
+│ P1     █████████████████  PRESENT        │
+│ P2     █████████████████  PRESENT        │
+│ P3     ███████████░░░░░░  PARTIAL        │
+│ P4     ────────────────   NOT STARTED    │
+│                                          │
+│ [VIEW TIMELINE] [EXPORT EVIDENCE]        │
+└──────────────────────────────────────────┘
+```
+
+This directly demonstrates the system's explainability.
+
+---
+
+# 5. INTERACTION 3 — Occupancy visualization
+
+Don't only show:
+
+```text
+54 / 60
+```
+
+Make it visual.
+
+### Classroom occupancy map
+
+```text
+                 CLASSROOM 203
+
+       ┌────────────────────────────┐
+       │                            │
+       │  ●  ●  ●  ●  ●  ●         │
+       │                            │
+       │  ●  ●  ●  ●  ●            │
+       │                            │
+       │       👤                  │
+       │                            │
+       │  ●  ●  ●  ●  ●            │
+       │                            │
+       └───────────🚪───────────────┘
+                   ↑
+                ENTRY
+```
+
+Use actual tracked positions if your pipeline provides them.
+
+Click a dot:
+
+```text
+Track #17
+STU001
+Confidence 0.91
+```
+
+This creates an actual **AI vision interface**, rather than a spreadsheet dashboard.
+
+---
+
+# 6. INTERACTION 4 — Live event timeline
+
+Instead of a simple event table:
+
+```text
+09:42 STU001 IN
+09:43 STU023 OUT
+```
+
+make a timeline.
+
+```text
+09:40 ─────────────────────────────────────── 09:45
+
+09:40:12    STU034
+            ↓
+            CLASS101 IN
+
+09:41:03    STU127
+            ↓
+            CLASS203 IN
+
+09:42:17    UNKNOWN
+            ↓
+            CLASS203
+
+09:43:08    STU083
+            ↓
+            CLASS301 OUT
+```
+
+Click an event:
+
+```text
+EVENT #EVT1932
+
+Student: STU034
+Track: #81
+Camera: C101_ENTRY
+Direction: IN
+
+Face:      0.93
+Body:      0.81
+Fusion:    0.89
+
+Decision: CONFIRMED
+```
+
+---
+
+# 7. INTERACTION 5 — Exception center
+
+This should be a dedicated panel.
+
+```text
+┌─────────────────────────────────────────┐
+│ EXCEPTIONS                         4    │
+├─────────────────────────────────────────┤
+│ 🔴 UNKNOWN PERSON              2 min ago│
+│    C203 ENTRY / Track #31               │
+│                                         │
+│ 🟠 IDENTITY UNCERTAIN          4 min ago│
+│    C301 EXIT / Track #18                │
+│                                         │
+│ 🟡 LOW FACE QUALITY            5 min ago│
+│    C101 ENTRY / Track #42               │
+│                                         │
+│ 🔵 OCCUPANCY MISMATCH          8 min ago│
+│    CLASSROOM 203                        │
+└─────────────────────────────────────────┘
+```
+
+Click → evidence.
+
+---
+
+# 8. Add a "Physical Reality" panel
+
+This is particularly important because of the problem you identified.
+
+Show four separate numbers:
+
+```text
+PHYSICAL REALITY
+
+Detected People       312
+Active Tracks         309
+Identified Students   301
+Unknown / Uncertain    11
+```
+
+Then:
+
+```text
+ATTENDANCE
+
+Present               296
+Partial                 5
+Absent                  7
+Uncertain               4
+```
+
+This prevents the UI from pretending that:
+
+```text
+312 detected = 312 students
+```
+
+---
+
+# 9. Add an occupancy mismatch alarm
+
+This could become one of your best features.
+
+Example:
+
+```text
+VISION COUNT              54
+EVENT-DERIVED COUNT       52
+
+DIFFERENCE                 2
+```
+
+UI:
+
+```text
+⚠ OCCUPANCY MISMATCH
+
+CLASSROOM 203
+Vision: 54
+Expected: 52
+
+Possible causes:
+• missed OUT event
+• temporary occlusion
+• track fragmentation
+• camera blind spot
+
+[INVESTIGATE]
+```
+
+Click **INVESTIGATE** and show the relevant events.
+
+That's a genuinely useful system feature.
+
+---
+
+# 10. Camera Command Center
+
+Create a dedicated tab:
+
+```text
+OVERVIEW
+CLASSROOMS
+CAMERAS
+ATTENDANCE
+EVENTS
+EXCEPTIONS
+REPORTS
+```
+
+### Cameras page
+
+```text
+┌───────────────────────────────────────────────┐
+│ CAMERA HEALTH                                 │
+├───────────┬──────────┬─────────┬──────────────┤
+│ CAMERA    │ STATUS   │ FPS     │ LATENCY      │
+├───────────┼──────────┼─────────┼──────────────┤
+│ C101-IN   │ ● LIVE   │ 24.8    │ 42ms         │
+│ C101-OUT  │ ● LIVE   │ 24.3    │ 45ms         │
+│ C203-IN   │ ● LIVE   │ 25.1    │ 39ms         │
+│ C203-OUT  │ ⚠ DEGRADED│ 11.2  │ 101ms        │
+└───────────┴──────────┴─────────┴──────────────┘
+```
+
+Click camera:
+
+```text
+C203 ENTRY
+
+LIVE PREVIEW
+
+FPS: 25
+Latency: 39ms
+Dropped: 0
+Tracks: 17
+
+Capture Quality
+Face size      ████████████  78%
+Sharpness      █████████░░░  71%
+Lighting       ███████████░  88%
+```
+
+---
+
+# 11. Add a "System AI" page
+
+This is for judges/technical evaluators.
+
+```text
+AI PIPELINE
+
+Detection
+██████████████████  97%
+
+Tracking
+█████████████████░  94%
+
+Face Quality
+██████████████░░░░  82%
+
+Identity
+████████████████░░  91%
+
+Attendance
+█████████████████░  95%
+```
+
+And:
+
+```text
+INFERENCE LOAD
+
+YOLO                  61%
+Face                  19%
+Body                  11%
+Tracking                4%
+Other                   5%
+```
+
+This is where your profiling results can eventually appear.
+
+---
+
+# 12. Make the UI tell the story
+
+The navigation should be:
+
+```text
+┌──────────────────┐
+│ VISION COMMAND   │
+│ CENTER           │
+├──────────────────┤
+│                  │
+│ ● Overview       │
+│                  │
+│ ◉ Classrooms     │
+│                  │
+│ ◉ Cameras        │
+│                  │
+│ ◉ Attendance     │
+│                  │
+│ ◉ Events         │
+│                  │
+│ ⚠ Exceptions     │
+│                  │
+│ ◉ Reports        │
+│                  │
+└──────────────────┘
+```
+
+The main page is not overloaded.
+
+---
+
+# 13. "Secret" interaction: global time travel
+
+This is particularly useful for demonstrations.
+
+Add:
+
+```text
+LIVE ●
+```
+
+at the top.
+
+Click it:
+
+```text
+LIVE ●
+```
+
+becomes:
+
+```text
+REPLAY MODE
+```
+
+Then:
+
+```text
+09:32 ───────●──────── 09:48
+             ↑
+          09:41
+```
+
+The operator can replay:
+
+```text
+Student entered
+↓
+Face captured
+↓
+Identity confirmed
+↓
+IN event
+↓
+Student became PRESENT
+```
+
+This would be extremely useful for debugging and judging.
+
+---
+
+# 14. Product-level UX details
+
+Use:
+
+### Hover
+
+Show quick information.
+
+### Click
+
+Open detailed drawer.
+
+### Double-click
+
+Open full investigation view.
+
+### Keyboard
+
+```text
+1 → Overview
+2 → Classrooms
+3 → Cameras
+4 → Attendance
+5 → Events
+6 → Exceptions
+```
+
+### Filters
+
+```text
+Classroom
+Camera
+Student
+Event
+Status
+Time
+Confidence
+```
+
+### Search
+
+```text
+Search Student ID / Name / Track ID
+```
+
+### Export
+
+```text
+CSV
+Daily report
+Monthly report
+Event audit
+Student evidence
+```
+
+---
+
+# 15. The most important UI KPI cards
+
+Don't have 20 KPI cards.
+
+Use only:
+
+```text
+┌─────────────┐
+│ ENROLLED    │
+│ 500         │
+└─────────────┘
+
+┌─────────────┐
+│ PHYSICAL    │
+│ 312         │
+└─────────────┘
+
+┌─────────────┐
+│ IDENTIFIED  │
+│ 301         │
+└─────────────┘
+
+┌─────────────┐
+│ PRESENT     │
+│ 296         │
+└─────────────┘
+
+┌─────────────┐
+│ EXCEPTIONS  │
+│ 4           │
+└─────────────┘
+```
+
+The hierarchy matters.
+
+---
+
+# 16. Deployment architecture
+
+Your current system can evolve to:
+
+```text
+                    ┌──────────────┐
+                    │ CCTV CAMERAS │
+                    └──────┬───────┘
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │ AI ENGINE    │
+                    │ Python       │
+                    └──────┬───────┘
+                           │
+                     CampusEvent
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │ FastAPI      │
+                    │ REST + WS    │
+                    └──────┬───────┘
+                           │
+                           ▼
+              ┌─────────────────────────┐
+              │ VISION COMMAND CENTER   │
+              │                         │
+              │ HTML / JS               │
+              │ Charts                  │
+              │ Live events             │
+              │ Interactive evidence    │
+              └─────────────────────────┘
+```
+
+Keep it **on-premise**. That directly fits the competition's requirement for zero cloud dependency.
+
+---
+
+# 17. What I would deploy next
+
+Don't touch YOLO yet.
+
+Your next deployment should be:
+
+## `v1.1-command-center-ui`
+
+### Build these 7 components:
+
+```text
+1. Overview
+   └── KPI + occupancy + live events
+
+2. Classroom Explorer
+   └── interactive rooms + occupancy
+
+3. Camera Monitor
+   └── 10 cameras + health + quality
+
+4. Student Evidence Drawer
+   └── face + body + fusion + movement
+
+5. Exception Center
+   └── unknown + uncertain + mismatches
+
+6. Attendance Analytics
+   └── period/day/month + charts
+
+7. Replay / Investigation
+   └── timeline + historical events
+```
+
+---
+
+# 18. The UI should eventually look like this
+
+```text
+╔════════════════════════════════════════════════════════════════════╗
+║ VISION COMMAND CENTER                     ● SYSTEM ONLINE         ║
+║ SRM AI VIDEO ATTENDANCE                  25.1 FPS   10/10 CAMERAS ║
+╠════════════════════════════════════════════════════════════════════╣
+║                                                                    ║
+║  500              312              301             296             ║
+║ ENROLLED         PHYSICAL        IDENTIFIED       PRESENT          ║
+║                                                                    ║
+╠══════════════════════════════════════╦═════════════════════════════╣
+║                                      ║                             ║
+║        CAMPUS OCCUPANCY              ║       SYSTEM HEALTH        ║
+║                                      ║                             ║
+║  101   ████████████████  58/60       ║ Cameras       10/10        ║
+║  203   ██████████████    54/60       ║ CPU           67%          ║
+║  301   █████████████     47/50       ║ RAM           443 MB       ║
+║  401   ███████████████   61/65       ║ Events        312/min      ║
+║                                      ║                             ║
+╠══════════════════════════════════════╬═════════════════════════════╣
+║ LIVE MOVEMENT                        ║ EXCEPTIONS                 ║
+║                                      ║                             ║
+║ ● STU034 → 101 IN                    ║ 🔴 UNKNOWN PERSON          ║
+║ ● STU127 → 203 IN                    ║ 🟠 IDENTITY UNCERTAIN      ║
+║ ● STU083 → 301 OUT                   ║ 🟡 LOW FACE QUALITY        ║
+║ ● STU091 → 401 IN                    ║ ⚠ OCCUPANCY MISMATCH       ║
+║                                      ║                             ║
+╠══════════════════════════════════════╩═════════════════════════════╣
+║                                                                    ║
+║  CLICK ANY STUDENT → MULTIMODAL EVIDENCE + ATTENDANCE TIMELINE    ║
+║                                                                    ║
+╚════════════════════════════════════════════════════════════════════╝
+```
+
+## And the key principle
+
+**Don't make the UI decorative. Make every visual element explain a system decision.**
+
+A judge clicks:
+
+```text
+CLASSROOM 203
+```
+
+→ sees occupancy.
+
+Clicks:
+
+```text
+STU001
+```
+
+→ sees identity evidence.
+
+Clicks:
+
+```text
+IN EVENT
+```
+
+→ sees camera + track + timestamp.
+
+Clicks:
+
+```text
+PRESENT
+```
+
+→ sees accumulated presence duration.
+
+Clicks:
+
+```text
+OCCUPANCY MISMATCH
+```
+
+→ sees the conflicting tracks/events.
+
+That gives you a **closed evidence chain**:
+
+```text
+CAMERA
+  ↓
+PERSON
+  ↓
+TRACK
+  ↓
+IDENTITY
+  ↓
+MOVEMENT
+  ↓
+OCCUPANCY
+  ↓
+ATTENDANCE
+  ↓
+EVIDENCE
+```
+
+That is the UI I would build before doing another major AI-model change.

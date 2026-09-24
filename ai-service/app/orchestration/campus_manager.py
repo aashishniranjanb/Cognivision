@@ -11,9 +11,25 @@ from app.events.event_reconciler import EventReconciler, ConflictResolution
 from app.state.global_student_state import GlobalStudentStateManager, GlobalStudentState
 from app.attendance.event import AttendanceEvent
 
+def _resolve_path(rel_path: str) -> Path:
+    p = Path(rel_path)
+    if p.is_absolute() and p.exists():
+        return p
+    here = Path(__file__).resolve()
+    candidates = [
+        p,
+        here.parent.parent.parent.parent / rel_path,
+        here.parent.parent.parent / rel_path,
+        here.parent.parent / rel_path,
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    return here.parent.parent.parent.parent / rel_path
+
 class CampusManager:
     def __init__(self, config_path: str = "configs/campus/campus_config.json"):
-        self.config_path = Path(config_path)
+        self.config_path = _resolve_path(config_path)
         self.campus_id = "CAMPUS_DEFAULT"
         self.classrooms: Dict[str, ClassroomManager] = {}
 
@@ -131,11 +147,13 @@ class CampusManager:
         resolution = self.reconciler.reconcile(event)
 
         if resolution.action == "ACCEPTED":
+            loc_id = getattr(event, "location_id", getattr(event, "classroom_id", "UNKNOWN"))
+            dir_val = getattr(event, "direction", getattr(event, "event_type", "IN"))
             # Update single source of campus presence
             self.state_manager.update_presence(
                 student_id=event.student_id,
-                location_id=event.location_id,
-                direction=event.direction,
+                location_id=loc_id,
+                direction=dir_val,
                 camera_id=event.camera_id,
                 timestamp=event.timestamp
             )

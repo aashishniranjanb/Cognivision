@@ -1,0 +1,2035 @@
+Yes. **This changes the priority.**
+
+The competition is not primarily a “face recognition” competition. The real problem is:
+
+> **Can the system reliably determine who entered, who exited, and who is currently inside the classroom?**
+
+If the system says **95/100 present**, the first question from a judge will be: **“Where are the other 5?”**
+
+So I would change the development strategy now.
+
+# The winning architecture
+
+```text
+                    CCTV
+                      │
+                      ▼
+             ┌─────────────────┐
+             │ PERSON DETECTOR │
+             │   YOLO / etc.   │
+             └────────┬────────┘
+                      │
+                      ▼
+             ┌─────────────────┐
+             │   BYTE TRACK    │
+             │ Track every     │
+             │ person          │
+             └────────┬────────┘
+                      │
+             ┌────────┴─────────┐
+             ▼                  ▼
+      HEAD / PERSON COUNT   CROSSING EVENT
+             │                  │
+             │             IN / OUT
+             │                  │
+             └────────┬─────────┘
+                      ▼
+             ┌─────────────────┐
+             │ IDENTITY ENGINE │
+             │ Face + Body     │
+             └────────┬────────┘
+                      ▼
+             ┌─────────────────┐
+             │ GLOBAL STATE    │
+             │                 │
+             │ INSIDE          │
+             │ OUTSIDE         │
+             │ UNKNOWN         │
+             │ UNCERTAIN       │
+             └────────┬────────┘
+                      ▼
+             ┌─────────────────┐
+             │ ATTENDANCE      │
+             │ ENGINE          │
+             └────────┬────────┘
+                      ▼
+                DASHBOARD
+```
+
+The key change:
+
+**Person counting/tracking becomes an independent layer from identity recognition.**
+
+That means:
+
+> Even if face recognition fails, the system must still know that a person entered.
+
+---
+
+# 1. Your “95/100” problem
+
+Suppose:
+
+```text
+100 registered students
+```
+
+At the end:
+
+```text
+Detected inside = 95
+```
+
+Don't immediately conclude:
+
+```text
+5 absent
+```
+
+Instead:
+
+```text
+100 expected
+       │
+       ▼
+Person counting
+       │
+       ├── 97 people physically detected
+       │
+       ├── 3 missed by detector
+       │
+       ▼
+Tracking
+       │
+       ├── 96 valid tracks
+       │
+       ▼
+Identity
+       │
+       ├── 94 confirmed
+       ├── 1 uncertain
+       └── 1 unknown
+       │
+       ▼
+Attendance reconciliation
+```
+
+This gives you **error localization**.
+
+Your dashboard should eventually say:
+
+```text
+Expected:             100
+
+Physical count:        97
+Tracked:               96
+Identified:             94
+Uncertain:               1
+Unknown:                1
+```
+
+That's much stronger than:
+
+```text
+Present: 95
+Absent: 5
+```
+
+---
+
+# 2. Your corridor idea is actually important
+
+Your idea:
+
+> Make students enter one by one through a controlled corridor/door so the camera captures them properly.
+
+For **Phase I**, I would absolutely use this if the competition setup permits it.
+
+You are effectively designing a **controlled capture zone**.
+
+Instead of:
+
+```text
+                    classroom
+
+      👤 👤 👤 👤 👤
+       ↗ ↓ ↘ ↙ ↗
+        chaotic motion
+
+             CAMERA
+```
+
+create:
+
+```text
+                    CLASSROOM
+                       │
+                       │
+                       ▼
+                ┌─────────────┐
+                │ CAPTURE     │
+                │ CORRIDOR    │
+                │             │
+                │     👤      │
+                │     👤      │
+                │     👤      │
+                └──────┬──────┘
+                       │
+                       ▼
+                    CAMERA
+```
+
+But there is an even better version.
+
+---
+
+# 3. Don't split one camera into four pieces blindly
+
+Your idea of:
+
+> split the screen into 4 and track four with Python
+
+is technically possible, but **I would not make that the primary solution**.
+
+If your source is already low-resolution:
+
+```text
+1920 × 1080
+```
+
+and you split it:
+
+```text
+960 × 540
+960 × 540
+----------------
+960 × 540
+960 × 540
+```
+
+you have reduced the usable resolution for each region.
+
+For face recognition, this can actually hurt.
+
+Instead:
+
+## Use virtual zones.
+
+One camera:
+
+```text
+┌────────────────────────────────────────┐
+│                                        │
+│   ZONE 1       ZONE 2                  │
+│                                        │
+│       👤             👤                │
+│                                        │
+│                                        │
+│   ZONE 3       ZONE 4                  │
+│                                        │
+│       👤             👤                │
+│                                        │
+└────────────────────────────────────────┘
+```
+
+The detector sees the **full-resolution frame**.
+
+Then Python assigns tracks:
+
+```text
+Track 17 → Zone 1
+Track 18 → Zone 2
+Track 19 → Zone 3
+Track 20 → Zone 4
+```
+
+You aren't physically cutting the image before detection.
+
+---
+
+# 4. Better: use a “capture funnel”
+
+This is the architecture I would test.
+
+```text
+                 STUDENTS
+            👤 👤 👤 👤 👤
+                    │
+                    ▼
+              ┌───────────┐
+              │  FUNNEL   │
+              │           │
+              │    👤     │
+              │    👤     │
+              └─────┬─────┘
+                    │
+                    ▼
+             ┌─────────────┐
+             │ CAPTURE LINE│
+             └──────┬──────┘
+                    │
+                    ▼
+                 CAMERA
+```
+
+The objective isn't necessarily to physically force every student to stop.
+
+It's to create a **narrow region where the system gets its best observation**.
+
+Then:
+
+```text
+Person detected
+       ↓
+Track created
+       ↓
+Enters capture zone
+       ↓
+Best frame selection
+       ↓
+Face quality
+       ↓
+Face recognition
+       ↓
+Body Re-ID
+       ↓
+Identity confirmation
+       ↓
+Crossing line
+       ↓
+IN
+```
+
+This is significantly more robust than trying to recognize faces anywhere in a crowded classroom.
+
+---
+
+# 5. Separate the three questions
+
+Your system should answer these independently.
+
+### Question 1 — How many people?
+
+```text
+PERSON COUNT
+```
+
+### Question 2 — Who are they?
+
+```text
+IDENTITY
+```
+
+### Question 3 — Are they currently inside?
+
+```text
+OCCUPANCY STATE
+```
+
+So:
+
+```text
+              PERSON
+                │
+       ┌────────┼─────────┐
+       ▼        ▼         ▼
+     COUNT    IDENTITY   LOCATION
+       │        │         │
+       └────────┼─────────┘
+                ▼
+          ATTENDANCE
+```
+
+This is the fundamental architecture I would defend to the judges.
+
+---
+
+# 6. The critical new module: Count Reconciliation
+
+You already have:
+
+```text
+GlobalStudentStateManager
+```
+
+Now add:
+
+```text
+PersonCountReconciler
+```
+
+Example:
+
+```text
+ENTRY CAMERA
+
+Detected crossings:
+    101
+    102
+    103
+    ...
+    150
+
+OUT camera:
+
+    11
+
+Therefore:
+
+Net occupancy change
+= IN - OUT
+= 50 - 11
+= +39
+```
+
+Then compare:
+
+```text
+Vision count
+vs
+Event-derived occupancy
+vs
+Student-state occupancy
+```
+
+Example:
+
+```text
+Physical detector count:       42
+IN events:                     47
+OUT events:                     5
+Expected occupancy:            42
+Identified students:           40
+Unknown:                        1
+Uncertain:                      1
+```
+
+Now you can tell the operator:
+
+> **42 people physically inside, 40 identified, 1 unknown, 1 uncertain.**
+
+That is far more informative.
+
+---
+
+# 7. The flowchart you need
+
+Put this directly into your technical documentation:
+
+```text
+                 CCTV FRAME
+                      │
+                      ▼
+              PERSON DETECTION
+                      │
+                      ▼
+              MULTI-OBJECT TRACK
+                      │
+                      ▼
+              ┌───────────────┐
+              │ CAPTURE ZONE? │
+              └───────┬───────┘
+                      │
+                     YES
+                      │
+                      ▼
+             BEST FRAME SELECTION
+                      │
+                      ▼
+             FACE QUALITY CHECK
+                      │
+             ┌────────┴─────────┐
+             │                  │
+           GOOD               POOR
+             │                  │
+             ▼                  ▼
+       FACE EMBEDDING       BODY RE-ID
+             │                  │
+             └────────┬─────────┘
+                      ▼
+              ADAPTIVE FUSION
+                      │
+          ┌───────────┼───────────┐
+          ▼           ▼           ▼
+       CONFIRMED   UNCERTAIN    UNKNOWN
+          │           │           │
+          └───────────┼───────────┘
+                      ▼
+                LINE CROSSING
+                      │
+               ┌──────┴──────┐
+               ▼             ▼
+              IN            OUT
+               │             │
+               └──────┬──────┘
+                      ▼
+            GLOBAL STUDENT STATE
+                      │
+                      ▼
+             OCCUPANCY ENGINE
+                      │
+                      ▼
+             PERIOD ATTENDANCE
+                      │
+                      ▼
+                DASHBOARD
+```
+
+---
+
+# 8. Now attack the camera problem
+
+You specifically mentioned:
+
+> Camera resolution and info poor
+> Monitor from center point
+> camera angle
+> is it facing toward people
+> field of view
+
+These are not minor details.
+
+Create a **Camera Quality Assessment** before doing more model work.
+
+For every candidate camera:
+
+| Parameter             | Measure           |
+| --------------------- | ----------------- |
+| Resolution            | 1920×1080 etc.    |
+| FPS                   | actual            |
+| Camera height         | m                 |
+| Distance to doorway   | m                 |
+| Horizontal angle      | °                 |
+| Vertical angle        | °                 |
+| FOV                   | °                 |
+| Face pixel width      | px                |
+| Person pixel height   | px                |
+| Lighting              | lux / qualitative |
+| Backlighting          | yes/no            |
+| Occlusion             | low/medium/high   |
+| Crowd density         | people/m²         |
+| Capture-zone coverage | %                 |
+
+Most importantly:
+
+### Measure face size.
+
+For example:
+
+```text
+Face width < 20 px
+       ↓
+Recognition unreliable
+
+20–40 px
+       ↓
+Marginal
+
+40–80 px
+       ↓
+Useful
+
+>80 px
+       ↓
+Good
+```
+
+Don't blindly use those exact thresholds as final acceptance criteria; measure your actual camera data and calibrate them.
+
+---
+
+# 9. Camera placement experiment
+
+Before changing the AI, test three positions.
+
+### Position A
+
+```text
+        CAMERA
+           ↓
+        👤 👤 👤
+```
+
+### Position B
+
+```text
+CAMERA → 👤 👤 👤
+```
+
+### Position C
+
+```text
+       CAMERA
+          ↘
+           👤
+             👤
+               👤
+```
+
+Record:
+
+```text
+person detection
+face quality
+face size
+ID accuracy
+track continuity
+```
+
+Then choose based on measurements.
+
+---
+
+# 10. The really powerful metric
+
+Don't only report:
+
+> Face recognition accuracy = X%.
+
+Report:
+
+### Capture Success Rate
+
+```text
+People entering
+        ↓
+People successfully captured
+        ↓
+People successfully tracked
+        ↓
+People successfully identified
+```
+
+For example:
+
+```text
+100 students entered
+
+100 detected
+ 98 tracked correctly
+ 96 captured with usable face
+ 94 identified
+  2 uncertain
+  2 unknown
+```
+
+Now you know exactly where the 6 losses occurred.
+
+---
+
+# 11. Your new competition KPI dashboard
+
+I would add this:
+
+```text
+┌────────────────────────────────────────────┐
+│          ATTENDANCE SYSTEM HEALTH           │
+├────────────────────────────────────────────┤
+│ Expected Students             100           │
+│ Physical People Detected      98            │
+│ Active Tracks                 97            │
+│ Successfully Identified       94            │
+│ Unknown                        2            │
+│ Uncertain                      2            │
+│ Current Occupancy             96            │
+├────────────────────────────────────────────┤
+│ Capture Success               98%            │
+│ Tracking Success              97%            │
+│ Identity Success              94%            │
+│ False Acceptance               0%            │
+└────────────────────────────────────────────┘
+```
+
+Now the judge can see that your system isn't hiding failures.
+
+---
+
+# 12. Your biggest strategic advantage
+
+The competition explicitly asks for:
+
+* simultaneous multi-subject detection
+* inward/outward movement
+* occupancy
+* recognition
+* edge cases
+* scalability
+* live dashboard
+
+Your architecture can demonstrate all of these.
+
+The uploaded competition circular specifically says the Phase-II target is **500 students across 5 classrooms**, with live campus testing starting October 26. It also explicitly evaluates multi-subject/directional tracking and edge-case management.
+
+So I would **not** spend the next week adding LLMs, voice, RAG, emotion recognition, gait AI, or another flashy model.
+
+Instead:
+
+```text
+                  YOUR CORE
+                     │
+        ┌────────────┼─────────────┐
+        ▼            ▼             ▼
+     COUNT         TRACK          IDENTITY
+        │            │             │
+        └────────────┼─────────────┘
+                     ▼
+                 IN / OUT
+                     │
+                     ▼
+                OCCUPANCY
+                     │
+                     ▼
+                ATTENDANCE
+```
+
+## And the immediate build order should now be:
+
+### **1. Person-counting accuracy**
+
+### **2. Entry/exit reconciliation**
+
+### **3. Camera placement/capture-zone optimization**
+
+### **4. Best-frame face capture**
+
+### **5. Face + Body identity**
+
+### **6. Attendance reconciliation**
+
+### **7. Dashboard evidence**
+
+### **8. 100 → 500 student stress test**
+
+**Do not optimize facial recognition before solving capture and counting.**
+
+If the camera never gets a usable observation of the student, a better face model won't solve the actual problem.
+
+Your **corridor + controlled capture zone** idea is therefore worth prototyping as a Phase-I/controlled-environment strategy. For Phase-II, the architecture should remain capable of handling ordinary uncontrolled classroom/campus movement.
+
+
+Yes. **Now we cook the actual engineering upgrade.**
+
+You already have `v1.0-end-to-end-campus`, so we should **not rebuild the project**. We will upgrade the existing pipeline in eight controlled modules.
+
+The target architecture becomes:
+
+```text
+                 CCTV
+                   │
+                   ▼
+          ┌─────────────────┐
+          │ PERSON DETECTOR │
+          └────────┬────────┘
+                   ▼
+          ┌─────────────────┐
+          │   BYTE TRACK    │
+          └────────┬────────┘
+                   │
+        ┌──────────┴──────────┐
+        ▼                     ▼
+ PERSON COUNT            TRACK MANAGEMENT
+        │                     │
+        └──────────┬──────────┘
+                   ▼
+             CAPTURE ZONE
+                   │
+                   ▼
+          BEST FRAME SELECTOR
+                   │
+             ┌─────┴─────┐
+             ▼           ▼
+           FACE         BODY
+             │           │
+             └─────┬─────┘
+                   ▼
+           ADAPTIVE FUSION
+                   │
+             ID / UNKNOWN
+                   │
+                   ▼
+          ENTRY / EXIT ENGINE
+                   │
+                   ▼
+       GLOBAL OCCUPANCY STATE
+                   │
+                   ▼
+         ATTENDANCE RECONCILER
+                   │
+          ┌────────┴────────┐
+          ▼                 ▼
+      DATABASE          DASHBOARD
+```
+
+---
+
+# STEP 0 — Freeze what you have
+
+Create a new branch:
+
+```powershell
+git checkout -b v1.1-real-world-validation
+```
+
+Do **not** modify the old `v1.0` branch.
+
+Your current baseline is:
+
+```text
+34 tests passing
+10-camera pipeline
+FastAPI
+WebSocket dashboard
+SQLite
+RTSP
+YOLOv8n
+ByteTrack
+Face
+Body Re-ID
+Adaptive fusion
+Global state
+Period attendance
+```
+
+The current 10-camera replay reports 25.57 aggregate FPS, 0% dropped frames, 0% ID-switch rate and 0% FAR under that benchmark workload. 
+
+Now we improve **measurement and real-world robustness**.
+
+---
+
+# STEP 1 — PERSON COUNTING ACCURACY
+
+This is the first thing I would implement.
+
+Currently:
+
+```text
+YOLO → ByteTrack → Identity
+```
+
+Add:
+
+```text
+YOLO
+ ↓
+PersonCountManager
+ ↓
+ByteTrack
+```
+
+## Create
+
+```text
+ai-service/app/counting/
+├── __init__.py
+├── person_counter.py
+├── occupancy_counter.py
+└── count_metrics.py
+```
+
+### `person_counter.py`
+
+Track:
+
+```python
+active_track_ids
+entered_count
+exited_count
+current_count
+```
+
+But **do not count detections directly**.
+
+Bad:
+
+```python
+count += len(detections)
+```
+
+because the same person appears in many frames.
+
+Instead:
+
+```text
+Frame 1 → Track 17
+Frame 2 → Track 17
+Frame 3 → Track 17
+Frame 4 → Track 17
+```
+
+That's:
+
+```text
+1 person
+```
+
+not:
+
+```text
+4 people
+```
+
+---
+
+## Use Track IDs
+
+Your existing architecture already distinguishes:
+
+```text
+Track ID ≠ Student ID
+```
+
+Keep that separation.
+
+For example:
+
+```text
+Track 17
+Track 18
+Track 19
+```
+
+means:
+
+```text
+3 physical people
+```
+
+even if:
+
+```text
+Track 17 → STU001
+Track 18 → UNKNOWN
+Track 19 → STU003
+```
+
+So your physical count becomes:
+
+```text
+Physical people = 3
+Identified students = 2
+Unknown people = 1
+```
+
+This is exactly what we want.
+
+---
+
+# STEP 1.1 — Don't trust one-frame tracks
+
+Add minimum track confirmation:
+
+```text
+NEW
+ ↓
+TENTATIVE
+ ↓
+CONFIRMED
+```
+
+For example:
+
+```text
+Track appears
+     ↓
+seen 1 frame
+     ↓
+TENTATIVE
+
+seen several consistent frames
+     ↓
+CONFIRMED
+```
+
+Then count only confirmed tracks.
+
+This prevents:
+
+```text
+shadow
+reflection
+false detection
+single-frame noise
+```
+
+from increasing occupancy.
+
+---
+
+# STEP 1.2 — Count should have two independent values
+
+This is important.
+
+### Vision count
+
+```text
+How many people does the camera currently see?
+```
+
+### Event occupancy
+
+```text
+How many people entered minus exited?
+```
+
+So:
+
+```text
+Vision Count = 42
+
+IN events = 50
+OUT events = 8
+
+Event Occupancy = 42
+```
+
+If:
+
+```text
+Vision Count = 42
+Event Occupancy = 47
+```
+
+you have an inconsistency.
+
+That should generate:
+
+```text
+OCCUPANCY_MISMATCH
+```
+
+---
+
+# STEP 1.3 — Add a reconciliation metric
+
+Create:
+
+```text
+ai-service/app/counting/occupancy_reconciler.py
+```
+
+Output:
+
+```json
+{
+  "classroom_id": "CLASSROOM_203",
+  "vision_count": 42,
+  "event_occupancy": 41,
+  "difference": 1,
+  "status": "MINOR_MISMATCH"
+}
+```
+
+This will become extremely useful during judging.
+
+---
+
+# STEP 2 — ENTRY / EXIT RECONCILIATION
+
+Your current entry/exit engine is already good.
+
+Now make it more rigorous.
+
+Current:
+
+```text
+ENTRY CAMERA
+     ↓
+IN
+
+EXIT CAMERA
+     ↓
+OUT
+```
+
+Add:
+
+```text
+Student state
+     ↓
+Previous location
+     ↓
+New event
+     ↓
+Transition validation
+```
+
+Create:
+
+```text
+ai-service/app/attendance/
+├── transition_validator.py
+└── occupancy_reconciler.py
+```
+
+---
+
+## Valid transitions
+
+```text
+OUTSIDE → IN → INSIDE
+INSIDE  → OUT → OUTSIDE
+```
+
+## Suspicious
+
+```text
+OUTSIDE → OUT
+```
+
+or:
+
+```text
+INSIDE → IN
+```
+
+or:
+
+```text
+IN → IN → IN
+```
+
+These should not create duplicate attendance.
+
+---
+
+## Impossible transition
+
+For example:
+
+```text
+STU001
+
+10:31:05
+CLASSROOM_203
+
+10:31:06
+CLASSROOM_205
+```
+
+unless those rooms are physically close enough.
+
+Generate:
+
+```text
+LOCATION_TRANSITION_ANOMALY
+```
+
+Your existing `EventReconciler` already suppresses rapid flaps and impossible transitions, so this is an extension rather than a replacement. 
+
+---
+
+# STEP 3 — CAMERA PLACEMENT / CAPTURE ZONE
+
+This is where your corridor idea comes in.
+
+Don't immediately split the image into four.
+
+Instead define:
+
+```text
+ROI
++
+CAPTURE ZONE
++
+CROSSING LINE
+```
+
+Example:
+
+```text
+                 CLASSROOM
+──────────────────────────────────
+
+        NORMAL TRACKING AREA
+
+
+          ┌────────────────┐
+          │  CAPTURE ZONE  │
+          │                │
+          │       👤       │
+          │       👤       │
+          └───────┬────────┘
+                  │
+             CROSSING LINE
+══════════════════╪══════════════
+                  │
+                  ▼
+                EXIT
+```
+
+---
+
+## Add configuration
+
+Modify:
+
+```text
+configs/campus/campus_config.json
+```
+
+to include:
+
+```json
+{
+  "capture_zone": [
+    [400, 200],
+    [850, 200],
+    [850, 650],
+    [400, 650]
+  ],
+  "crossing_line": [
+    [400, 500],
+    [850, 500]
+  ]
+}
+```
+
+Now the system knows:
+
+```text
+general tracking area
+capture area
+IN/OUT boundary
+```
+
+---
+
+# STEP 3.1 — Camera quality analyzer
+
+Create:
+
+```text
+ai-service/app/camera/
+└── camera_quality.py
+```
+
+Measure:
+
+```text
+resolution
+FPS
+blur
+brightness
+face pixel size
+person pixel height
+occlusion
+```
+
+And produce:
+
+```json
+{
+  "camera_id": "C203_ENTRY",
+  "resolution": "1280x720",
+  "fps": 25,
+  "face_quality": 0.74,
+  "average_face_width_px": 63,
+  "blur_score": 118.4,
+  "lighting_score": 0.81,
+  "capture_quality": "GOOD"
+}
+```
+
+Now you can objectively compare camera positions.
+
+---
+
+# STEP 3.2 — Don't guess camera placement
+
+Run:
+
+```text
+Camera Position A
+Camera Position B
+Camera Position C
+```
+
+Record:
+
+```text
+Average face size
+Face quality
+Track stability
+Recognition rate
+Occlusion rate
+```
+
+Then choose the measured configuration.
+
+This is where the **controlled corridor** becomes powerful.
+
+---
+
+# STEP 4 — BEST-FRAME FACE CAPTURE
+
+This is probably one of the biggest upgrades.
+
+Currently you shouldn't recognize a face simply because:
+
+```text
+face detected
+```
+
+Instead:
+
+```text
+Track 17
+ ↓
+10 frames
+ ↓
+select best frame
+ ↓
+recognition
+```
+
+Create:
+
+```text
+ai-service/app/face/
+└── best_frame.py
+```
+
+---
+
+## Frame scoring
+
+For each face frame calculate:
+
+```text
+Quality =
+    sharpness
+  + face size
+  + brightness
+  + pose
+  + occlusion
+  + detection confidence
+```
+
+Conceptually:
+
+```text
+frame_score =
+    quality(face)
+    × detection_confidence
+    × visibility
+```
+
+Do not make the weights permanent until you validate them.
+
+---
+
+## Example
+
+Track 17:
+
+```text
+Frame 101
+face width = 31px
+blur = high
+score = 0.42
+
+Frame 102
+face width = 47px
+blur = low
+score = 0.71
+
+Frame 103
+face width = 74px
+blur = low
+score = 0.91  ← BEST
+
+Frame 104
+face width = 68px
+score = 0.86
+```
+
+Use:
+
+```text
+Frame 103
+```
+
+for identity recognition.
+
+This is much better than running recognition on arbitrary frames.
+
+---
+
+# STEP 4.1 — Capture buffer
+
+For every track:
+
+```text
+Track 17
+ ├── frame 101
+ ├── frame 102
+ ├── frame 103
+ ├── frame 104
+ └── frame 105
+```
+
+Keep a small ring buffer.
+
+When the track enters the capture zone:
+
+```text
+select best frame
+```
+
+Then:
+
+```text
+Face embedding
+Body embedding
+Fusion
+```
+
+---
+
+# STEP 5 — FACE + BODY IDENTITY
+
+You already have this.
+
+But now improve the logic.
+
+Current conceptual flow:
+
+```text
+Face
+ +
+Body
+ ↓
+Fusion
+```
+
+Make it:
+
+```text
+Face observation
+    ↓
+identity score + reliability
+
+Body observation
+    ↓
+identity score + reliability
+
+          ↓
+
+Reliability-aware fusion
+          ↓
+       decision
+```
+
+And importantly:
+
+**Don't hardcode the dashboard statement "70% face, 30% body" as the final weight.**
+
+Use:
+
+```text
+base face weight
+×
+face reliability
+
+base body weight
+×
+body reliability
+
+normalize
+```
+
+So:
+
+```text
+Good face:
+Face 0.90
+Body 0.10
+```
+
+while:
+
+```text
+Occluded face:
+Face 0.20
+Body 0.80
+```
+
+and:
+
+```text
+Both bad:
+Face 0.42
+Body 0.58
+
+→ UNCERTAIN
+```
+
+---
+
+# STEP 5.1 — Add identity decision levels
+
+```text
+HIGH CONFIDENCE
+MEDIUM CONFIDENCE
+UNCERTAIN
+UNKNOWN
+```
+
+For example:
+
+```text
+Fusion score
+     ↓
+ ┌───────────────┐
+ │               │
+ ▼               ▼
+Known          Unknown
+ │
+ ├── high
+ ├── medium
+ └── uncertain
+```
+
+Do not force uncertain observations into a student ID.
+
+---
+
+# STEP 6 — ATTENDANCE RECONCILIATION
+
+This is the big one.
+
+Don't calculate:
+
+```text
+face recognized = present
+```
+
+Instead:
+
+```text
+Student
+ ↓
+Physical presence
+ ↓
+Track continuity
+ ↓
+IN event
+ ↓
+Current location
+ ↓
+Period interval
+ ↓
+Duration
+ ↓
+Attendance
+```
+
+---
+
+## Create
+
+```text
+ai-service/app/attendance/
+└── attendance_reconciler.py
+```
+
+It should combine:
+
+```text
+Person count
++
+IN/OUT events
++
+Global student state
++
+identity confidence
++
+classroom location
++
+period schedule
+```
+
+---
+
+# STEP 6.1 — Example
+
+Suppose:
+
+```text
+P1 = 09:00–09:50
+```
+
+STU001:
+
+```text
+IN  = 09:02
+OUT = 09:45
+```
+
+Duration:
+
+```text
+43 min
+```
+
+Therefore:
+
+```text
+43 / 50 = 86%
+```
+
+→ PRESENT.
+
+But:
+
+```text
+STU002
+
+IN = 09:02
+OUT = 09:12
+
+10 / 50 = 20%
+```
+
+→ PARTIAL.
+
+And:
+
+```text
+STU003
+
+No valid IN
+```
+
+→ ABSENT.
+
+---
+
+# STEP 6.2 — Handle the dangerous case
+
+Student leaves temporarily:
+
+```text
+09:02 IN
+09:20 OUT
+09:25 IN
+09:48 OUT
+```
+
+Don't mark them permanently absent after the first OUT.
+
+Instead calculate:
+
+```text
+Total presence
+=
+18 min
++
+23 min
+=
+41 min
+```
+
+Then:
+
+```text
+41 / 50 = 82%
+```
+
+→ PRESENT.
+
+This directly addresses your:
+
+> "if people go out what to do?"
+
+question.
+
+---
+
+# STEP 7 — DASHBOARD EVIDENCE
+
+You already have the evidence API and panel. 
+
+Now restructure the dashboard around **four truths**:
+
+```text
+┌─────────────────────────────────────┐
+│ PHYSICAL REALITY                    │
+│                                     │
+│ People detected:       42           │
+│ Active tracks:         41           │
+│                                     │
+├─────────────────────────────────────┤
+│ IDENTITY                            │
+│                                     │
+│ Identified:            39           │
+│ Unknown:                1           │
+│ Uncertain:              1           │
+│                                     │
+├─────────────────────────────────────┤
+│ OCCUPANCY                           │
+│                                     │
+│ Expected:              40           │
+│ Current:               39           │
+│ Mismatch:               1           │
+│                                     │
+├─────────────────────────────────────┤
+│ ATTENDANCE                          │
+│                                     │
+│ Present:               37           │
+│ Partial:                1           │
+│ Absent:                 1           │
+│ Uncertain:              1           │
+└─────────────────────────────────────┘
+```
+
+This makes the system transparent.
+
+---
+
+# STEP 7.1 — Student evidence
+
+Click:
+
+```text
+STU001
+```
+
+Show:
+
+```text
+IDENTITY
+Face similarity       0.94
+Face reliability      0.91
+
+Body similarity       0.82
+Body reliability      0.78
+
+Fusion                0.89
+Decision              CONFIRMED
+
+TRACK
+Track ID               17
+Student ID             STU001
+
+MOVEMENT
+Camera                 C203_ENTRY
+Direction              IN
+Time                   09:02:14
+
+ATTENDANCE
+P1                     PRESENT
+Presence               43m 12s
+```
+
+That gives you a complete chain of evidence.
+
+---
+
+# STEP 8 — 100 → 500 STRESS TEST
+
+Don't jump straight from:
+
+```text
+100
+```
+
+to:
+
+```text
+500
+```
+
+Use:
+
+```text
+100
+200
+300
+400
+500
+```
+
+For each:
+
+```text
+Students
+Cameras
+Active tracks
+FPS/camera
+CPU
+RAM
+Detection latency
+Face inference/sec
+Body inference/sec
+Dropped frames
+ID switches
+Unknowns
+False accepts
+Event latency
+Occupancy mismatch
+```
+
+Create:
+
+```text
+ai-service/benchmarks/
+└── benchmark_phase2_realistic.py
+```
+
+Output:
+
+```text
+PHASE-II SCALE TEST
+
+Students     Cameras    Tracks    FPS/cam
+-------------------------------------------
+100             2          70       X
+200             4         140       X
+300             6         210       X
+400             8         280       X
+500            10         350       X
+```
+
+Then:
+
+```text
+CPU
+RAM
+GPU
+Dropped frames
+Identity refresh/sec
+Events/sec
+```
+
+---
+
+# The most important new benchmark
+
+Don't just benchmark compute.
+
+Benchmark:
+
+## **Attendance integrity**
+
+For 100 simulated/annotated people:
+
+```text
+Expected:
+100
+
+Detected:
+98
+
+Tracked:
+97
+
+Entered:
+96
+
+Identified:
+94
+
+Correct attendance:
+93
+
+Unknown:
+1
+
+Uncertain:
+1
+
+Missed:
+2
+
+False attendance:
+0
+```
+
+Then calculate where the losses occurred.
+
+---
+
+# Your new code structure
+
+I would evolve your existing project to:
+
+```text
+ai-service/app/
+│
+├── counting/
+│   ├── person_counter.py
+│   ├── occupancy_counter.py
+│   ├── occupancy_reconciler.py
+│   └── count_metrics.py
+│
+├── camera/
+│   ├── camera_quality.py
+│   ├── rtsp_source.py
+│   └── health_monitor.py
+│
+├── face/
+│   ├── detector.py
+│   ├── quality.py
+│   ├── best_frame.py
+│   └── embedder.py
+│
+├── identity/
+│   ├── identity_manager.py
+│   └── robust_identity.py
+│
+├── reid/
+│   ├── extractor.py
+│   ├── quality.py
+│   └── matcher.py
+│
+├── attendance/
+│   ├── event.py
+│   ├── zone.py
+│   ├── state.py
+│   ├── duration.py
+│   ├── attendance_engine.py
+│   ├── transition_validator.py
+│   └── attendance_reconciler.py
+│
+├── orchestration/
+│   ├── camera_worker.py
+│   ├── classroom_manager.py
+│   └── campus_manager.py
+│
+├── scheduling/
+│   └── inference_scheduler.py
+│
+├── events/
+│   ├── event_schema.py
+│   ├── event_bus.py
+│   └── event_reconciler.py
+│
+└── backend/
+    ├── api.py
+    ├── report_service.py
+    └── attendance_repository.py
+```
+
+---
+
+# And the test structure
+
+Add:
+
+```text
+ai-service/tests/
+│
+├── test_person_counting.py
+├── test_occupancy_reconciliation.py
+├── test_capture_zone.py
+├── test_best_frame.py
+├── test_identity_fusion.py
+├── test_attendance_reconciliation.py
+├── test_camera_quality.py
+└── test_phase2_realistic.py
+```
+
+Your current baseline is 34 tests. 
+
+The next milestone should ideally be something like:
+
+```text
+34 existing tests
++
+8 new modules
++
+~25 new tests
+
+≈ 55–60 total tests
+```
+
+---
+
+# 🔥 The actual build order
+
+Do **not** implement all eight simultaneously.
+
+We're going to cook it in this order:
+
+```text
+DAY 1
+│
+├── PersonCounter
+├── OccupancyCounter
+└── tests
+        ↓
+DAY 2
+│
+├── Entry/Exit Reconciler
+├── Transition validation
+└── tests
+        ↓
+DAY 3
+│
+├── Camera Quality Analyzer
+├── Capture Zone
+└── calibration
+        ↓
+DAY 4
+│
+├── Best Frame Selector
+├── Face capture buffer
+└── tests
+        ↓
+DAY 5
+│
+├── Face + Body fusion refinement
+├── UNKNOWN / UNCERTAIN
+└── tests
+        ↓
+DAY 6
+│
+├── Attendance Reconciler
+├── multi-session presence
+└── tests
+        ↓
+DAY 7
+│
+├── Dashboard evidence
+├── physical vs identity vs attendance
+└── demo
+        ↓
+DAY 8+
+│
+└── 100 → 200 → 300 → 400 → 500
+```
+
+## **Start with #1 right now**
+
+Create:
+
+```text
+ai-service/app/counting/person_counter.py
+```
+
+The first milestone is very small:
+
+```text
+YOLO detections
+      ↓
+ByteTrack
+      ↓
+confirmed unique Track IDs
+      ↓
+physical person count
+```
+
+Then test:
+
+```text
+1 person  → count 1
+2 people → count 2
+same person across 100 frames → count 1
+person enters → +1
+person exits → -1
+two people cross → count remains 2
+unknown person → still counted physically
+```
+
+**This is the foundation. Once physical counting is trustworthy, identity becomes a second layer rather than the thing carrying the entire attendance system.**

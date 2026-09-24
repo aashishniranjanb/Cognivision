@@ -1,4 +1,4 @@
-﻿"""High-speed CPU Face Detector supporting OpenCV Haar Cascades and DNN SSD."""
+"""High-speed CPU Face Detector supporting OpenCV Haar Cascades and DNN SSD."""
 import cv2
 import numpy as np
 from typing import List, Tuple
@@ -11,33 +11,61 @@ class FaceDetection:
     crop: np.ndarray
 
 class FaceDetector:
-    def __init__(self, min_size: Tuple[int, int] = (40, 40)):
+    def __init__(self, min_size: Tuple[int, int] = (35, 35)):
         self.min_size = min_size
-        cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-        self.face_cascade = cv2.CascadeClassifier(cascade_path)
+        frontal_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+        profile_path = cv2.data.haarcascades + "haarcascade_profileface.xml"
+        self.face_cascade = cv2.CascadeClassifier(frontal_path)
+        self.profile_cascade = cv2.CascadeClassifier(profile_path)
         if self.face_cascade.empty():
             raise RuntimeError("Failed to load OpenCV face cascade classifier.")
 
     def detect_in_frame(self, frame: np.ndarray) -> List[FaceDetection]:
-        """Detects all faces in a whole frame."""
+        """Detects all faces in a frame across frontal and turned/profile angles."""
+        if frame is None or frame.size == 0:
+            return []
+
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = self.face_cascade.detectMultiScale(
+        h, w = frame.shape[:2]
+
+        # 1. Frontal faces
+        faces = list(self.face_cascade.detectMultiScale(
             gray,
             scaleFactor=1.1,
-            minNeighbors=5,
+            minNeighbors=4,
             minSize=self.min_size,
             flags=cv2.CASCADE_SCALE_IMAGE
-        )
+        ))
+
+        # 2. If no frontal face, try left and right profiles
+        if len(faces) == 0 and not self.profile_cascade.empty():
+            # Left profile
+            prof_left = self.profile_cascade.detectMultiScale(
+                gray, scaleFactor=1.1, minNeighbors=4, minSize=self.min_size
+            )
+            for box in prof_left:
+                faces.append(box)
+
+            # Right profile (flipped image)
+            flipped = cv2.flip(gray, 1)
+            prof_right = self.profile_cascade.detectMultiScale(
+                flipped, scaleFactor=1.1, minNeighbors=4, minSize=self.min_size
+            )
+            for (x, y, fw, fh) in prof_right:
+                rx = w - (x + fw)
+                faces.append((rx, y, fw, fh))
 
         results = []
-        for (x, y, w, h) in faces:
-            x1, y1, x2, y2 = max(0, x), max(0, y), min(frame.shape[1], x + w), min(frame.shape[0], y + h)
-            crop = frame[y1:y2, x1:x2]
-            results.append(FaceDetection(
-                bbox=(x1, y1, x2, y2),
-                confidence=0.90,
-                crop=crop
-            ))
+        for (x, y, fw, fh) in faces:
+            x1, y1 = max(0, x), max(0, y)
+            x2, y2 = min(w, x + fw), min(h, y + fh)
+            if x2 > x1 and y2 > y1:
+                crop = frame[y1:y2, x1:x2]
+                results.append(FaceDetection(
+                    bbox=(x1, y1, x2, y2),
+                    confidence=0.92,
+                    crop=crop
+                ))
         return results
 
     def detect_in_person_crop(self, person_crop: np.ndarray, offset: Tuple[int, int] = (0, 0)) -> List[FaceDetection]:

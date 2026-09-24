@@ -1,4 +1,4 @@
-﻿"""Reliability-Aware Adaptive Multimodal Fusion Engine (Equations 8 & 11 in PRD)."""
+"""Reliability-Aware Adaptive Multimodal Fusion Engine (Equations 8 & 11 in PRD)."""
 from collections import defaultdict
 from dataclasses import dataclass, asdict
 from typing import Dict, List, Optional
@@ -16,12 +16,16 @@ class FusedIdentityDecision:
     modality_weights: Dict[str, float]
     raw_observations: Dict[str, dict]
     audit_trail: dict
+    decision_level: str = "UNKNOWN"  # HIGH_CONFIDENCE, MEDIUM_CONFIDENCE, UNCERTAIN, UNKNOWN
 
 class AdaptiveFusionEngine:
     def __init__(
         self,
         base_weights: Optional[Dict[str, float]] = None,
-        acceptance_threshold: float = 0.52
+        acceptance_threshold: float = 0.50,
+        high_confidence_threshold: float = 0.75,
+        uncertain_threshold: float = 0.35,
+        min_reliable_threshold: float = 0.35
     ):
         # Base weights as per PRD: Face: 1.0, Body: 0.85, Gait: 0.70
         self.base_weights = base_weights or {
@@ -30,6 +34,9 @@ class AdaptiveFusionEngine:
             "gait": 0.70
         }
         self.acceptance_threshold = acceptance_threshold
+        self.high_confidence_threshold = high_confidence_threshold
+        self.uncertain_threshold = uncertain_threshold
+        self.min_reliable_threshold = min_reliable_threshold
 
     def fuse(self, track_id: int, observations: List[ModalityObservation]) -> FusedIdentityDecision:
         """
@@ -38,8 +45,9 @@ class AdaptiveFusionEngine:
           W_m = E_m / sum(E_j)
           S_fused(s) = sum(W_m * S_m(s))
         Only available modalities with reliability > 0 participate.
+        Assigns explicit decision levels: HIGH_CONFIDENCE, MEDIUM_CONFIDENCE, UNCERTAIN, UNKNOWN.
         """
-        valid_obs = [o for o in observations if o.reliability > 0.15 and o.candidate_id is not None]
+        valid_obs = [o for o in observations if o.reliability > 0.10 and o.candidate_id is not None]
 
         if not valid_obs:
             return FusedIdentityDecision(
@@ -49,8 +57,13 @@ class AdaptiveFusionEngine:
                 modalities_participating=[],
                 modality_weights={},
                 raw_observations={o.modality: o.to_dict() for o in observations},
-                audit_trail={"status": "REJECTED_NO_USABLE_MODALITY"}
+                audit_trail={"status": "REJECTED_NO_USABLE_MODALITY"},
+                decision_level="UNKNOWN"
             )
+
+        # Check if all modalities have poor reliability (both bad -> UNCERTAIN)
+        max_reliability = max(o.reliability for o in valid_obs)
+        both_bad = len(valid_obs) >= 2 and max_reliability < self.min_reliable_threshold
 
         # 1. Calculate Effective Weights E_m = B_m * R_m
         effective_weights = {}
@@ -77,18 +90,44 @@ class AdaptiveFusionEngine:
         # Pick candidate with highest fused score
         best_cand, best_score = max(candidate_fused_scores.items(), key=lambda x: x[1])
 
+        # Check for ambiguity: multiple conflicting candidates with close fused scores
+        sorted_cands = sorted(candidate_fused_scores.items(), key=lambda x: x[1], reverse=True)
+        ambiguous = False
+        if len(sorted_cands) > 1:
+            margin = sorted_cands[0][1] - sorted_cands[1][1]
+            if margin < 0.08 and sorted_cands[0][1] < self.high_confidence_threshold:
+                ambiguous = True
+
+        # Determine decision level
+        if both_bad or ambiguous:
+            decision_level = "UNCERTAIN"
+            final_decision = None
+        elif best_score >= self.high_confidence_threshold and max_reliability >= 0.50:
+            decision_level = "HIGH_CONFIDENCE"
+            final_decision = best_cand
+        elif best_score >= self.acceptance_threshold:
+            decision_level = "MEDIUM_CONFIDENCE"
+            final_decision = best_cand
+        elif best_score >= self.uncertain_threshold:
+            decision_level = "UNCERTAIN"
+            final_decision = None
+        else:
+            decision_level = "UNKNOWN"
+            final_decision = None
+
         audit_trail = {
             "track_id": track_id,
-            "decision": best_cand if best_score >= self.acceptance_threshold else "UNKNOWN",
+            "decision": final_decision or "UNKNOWN",
+            "decision_level": decision_level,
             "modalities": {o.modality: o.to_dict() for o in observations},
             "fusion": {
                 "decision": best_cand,
                 "confidence": round(best_score, 4),
-                "weights": {m: round(w, 4) for m, w in norm_weights.items()}
+                "weights": {m: round(w, 4) for m, w in norm_weights.items()},
+                "both_bad": both_bad,
+                "ambiguous": ambiguous
             }
         }
-
-        final_decision = best_cand if best_score >= self.acceptance_threshold else None
 
         return FusedIdentityDecision(
             track_id=track_id,
@@ -97,5 +136,6 @@ class AdaptiveFusionEngine:
             modalities_participating=list(norm_weights.keys()),
             modality_weights=norm_weights,
             raw_observations={o.modality: o.to_dict() for o in observations},
-            audit_trail=audit_trail
+            audit_trail=audit_trail,
+            decision_level=decision_level
         )
