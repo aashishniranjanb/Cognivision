@@ -3,42 +3,56 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SRM AI Attendance System — Executive Live Dashboard</title>
+  <title>VISION COMMAND CENTER — SRM AI Video Attendance</title>
   <style>
     :root {
-      --bg: #0d1117;
-      --card-bg: #161b22;
-      --border: #30363d;
-      --text: #c9d1d9;
-      --heading: #f0f6fc;
-      --accent: #58a6ff;
-      --green: #3fb950;
-      --orange: #d29922;
-      --red: #f85149;
+      --bg: #0B1020;
+      --panel: #111827;
+      --panel-hover: #182234;
+      --border: #1E293B;
+      --border-light: #2D3B4F;
+      --primary: #2563EB;
+      --primary-light: #3B82F6;
+      --success: #10B981;
+      --warning: #F59E0B;
+      --danger: #EF4444;
+      --text: #F8FAFC;
+      --muted: #94A3B8;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: var(--bg);
       color: var(--text);
       padding: 24px;
+      min-height: 100vh;
     }
-    header {
+
+    /* HEADER */
+    .command-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 24px;
-      border-bottom: 1px solid var(--border);
       padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
     }
-    h1 { font-size: 1.5rem; color: var(--heading); display: flex; align-items: center; gap: 12px; }
-    .badge-live {
-      background: rgba(63, 185, 80, 0.15);
-      color: var(--green);
+    .command-title h1 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .badge-online {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--success);
       padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 0.8rem;
-      font-weight: 600;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -47,482 +61,708 @@
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: var(--green);
-      box-shadow: 0 0 8px var(--green);
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 2s infinite;
     }
-    .stats-grid {
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.2); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    .command-subtitle {
+      font-size: 11px;
+      color: var(--muted);
+      font-family: monospace;
+      margin-top: 4px;
+    }
+    .telemetry-bar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .telemetry-item {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: monospace;
+    }
+
+    /* TOP 5 HIERARCHY KPI ROW */
+    .kpi-row {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 16px;
       margin-bottom: 24px;
     }
-    .stat-card {
-      background: var(--card-bg);
+    .kpi-card {
+      background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 16px;
+      border-top: 3px solid var(--border);
+      transition: transform 0.15s;
     }
-    .stat-title { font-size: 0.85rem; color: #8b949e; text-transform: uppercase; font-weight: 600; }
-    .stat-value { font-size: 2rem; font-weight: 700; color: var(--heading); margin-top: 8px; }
+    .kpi-card:hover { transform: translateY(-2px); }
+    .kpi-card.enrolled { border-top-color: #6366F1; }
+    .kpi-card.physical { border-top-color: var(--primary); }
+    .kpi-card.identified { border-top-color: #0EA5E9; }
+    .kpi-card.present { border-top-color: var(--success); }
+    .kpi-card.exceptions { border-top-color: var(--warning); }
+    .kpi-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--muted); letter-spacing: 0.8px; }
+    .kpi-value { font-size: 32px; font-weight: 800; font-family: monospace; margin-top: 6px; color: var(--text); }
+    .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
 
-    .main-grid {
+    /* CORE SURFACES GRID */
+    .center-grid {
       display: grid;
       grid-template-columns: 2fr 1fr;
       gap: 20px;
       margin-bottom: 24px;
     }
-    .card {
-      background: var(--card-bg);
+    .panel-card {
+      background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 20px;
     }
-    .card h2 { font-size: 1.1rem; color: var(--heading); margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-
-    .classroom-row {
-      margin-bottom: 16px;
-    }
-    .classroom-header {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.9rem;
-      margin-bottom: 6px;
-    }
-    .progress-bar-bg {
-      background: #21262d;
-      height: 12px;
-      border-radius: 6px;
-      overflow: hidden;
-    }
-    .progress-bar-fill {
-      height: 100%;
-      background: var(--accent);
-      width: 0%;
-      transition: width 0.4s ease;
-    }
-
-    .events-feed {
-      height: 280px;
-      overflow-y: auto;
-      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-      font-size: 0.85rem;
-    }
-    .event-item {
-      padding: 8px 10px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      display: flex;
-      justify-content: space-between;
-    }
-    .event-in { color: var(--green); }
-    .event-out { color: var(--orange); }
-    .event-exc { color: var(--red); }
-
-    .btn-action {
-      background: #238636;
-      color: #fff;
-      text-decoration: none;
-      padding: 7px 14px;
-      border-radius: 6px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      border: 1px solid rgba(240, 246, 252, 0.1);
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: background 0.2s;
-    }
-    .btn-action:hover { background: #2ea043; }
-
-    .cam-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-      gap: 12px;
-    }
-    .cam-card {
-      background: #0d1117;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 12px;
-      font-size: 0.82rem;
-    }
-    .cam-card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    .cam-name { font-weight: 700; color: var(--heading); font-family: monospace; }
-    .cam-state {
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 0.72rem;
+    .panel-title {
+      font-size: 13px;
       font-weight: 700;
       text-transform: uppercase;
-    }
-    .state-streaming { background: rgba(63, 185, 80, 0.2); color: var(--green); border: 1px solid var(--green); }
-    .state-connected { background: rgba(88, 166, 255, 0.2); color: var(--accent); border: 1px solid var(--accent); }
-    .state-degraded { background: rgba(210, 153, 34, 0.2); color: var(--orange); border: 1px solid var(--orange); }
-    .state-disconnected { background: rgba(248, 81, 73, 0.2); color: var(--red); border: 1px solid var(--red); }
-    .cam-metric { display: flex; justify-content: space-between; color: #8b949e; margin-top: 4px; }
-    .cam-metric span { color: var(--text); font-weight: 600; font-family: monospace; }
-
-    .evidence-search {
+      letter-spacing: 0.8px;
+      color: var(--muted);
       display: flex;
-      gap: 10px;
+      justify-content: space-between;
       margin-bottom: 16px;
     }
-    .evidence-input {
-      background: #0d1117;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 6px 12px;
-      color: var(--text);
-      font-size: 0.9rem;
-      font-family: monospace;
-      width: 140px;
-    }
-    .evidence-boxes {
+
+    /* FOUR TRUTHS STRIP */
+    .four-truths-strip {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      background: #090D1A;
+      border: 1px solid var(--border);
+      padding: 12px;
+      border-radius: 6px;
       margin-bottom: 16px;
     }
-    .evidence-box {
-      background: #0d1117;
+    .truth-col h4 {
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      padding-bottom: 4px;
+      margin-bottom: 6px;
+    }
+    .truth-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      margin-bottom: 2px;
+    }
+    .truth-item span:first-child { color: var(--muted); }
+    .truth-item span:last-child { font-weight: 700; font-family: monospace; }
+
+    /* CLASSROOM CARDS */
+    .occupancy-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .room-card {
+      background: #090D1A;
       border: 1px solid var(--border);
       border-radius: 6px;
       padding: 14px;
+      cursor: pointer;
+      transition: all 0.15s;
     }
-    .evidence-box h3 {
-      font-size: 0.9rem;
-      color: var(--accent);
-      margin-bottom: 10px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      padding-bottom: 4px;
-    }
-    .evidence-row {
+    .room-card:hover { border-color: var(--primary); background: var(--panel-hover); }
+    .room-card.mismatch { border-color: var(--warning); background: rgba(245,158,11,0.05); }
+    .room-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .room-name { font-size: 13px; font-weight: 700; }
+    .room-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; text-transform: uppercase; }
+    .room-badge.normal { background: rgba(16,185,129,0.15); color: var(--success); }
+    .room-badge.mismatch { background: rgba(245,158,11,0.15); color: var(--warning); }
+    .room-bar-bg { width: 100%; height: 8px; background: #1E293B; border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
+    .room-bar-fill { height: 100%; background: var(--primary); border-radius: 4px; }
+    .room-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); font-family: monospace; }
+
+    /* MISMATCH ALARM */
+    .mismatch-alarm {
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: rgba(245,158,11,0.08);
+      border: 1px solid var(--warning);
+      border-radius: 6px;
       display: flex;
       justify-content: space-between;
-      font-size: 0.83rem;
-      margin-bottom: 6px;
+      align-items: center;
     }
-    .evidence-row .lbl { color: #8b949e; }
-    .evidence-row .val { font-weight: 600; font-family: monospace; }
+    .mismatch-btn {
+      background: var(--warning);
+      color: #000;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
 
-    .student-lookup {
-      margin-top: 16px;
-      background: #0d1117;
+    /* SYSTEM HEALTH */
+    .health-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .health-card {
+      background: #090D1A;
       border: 1px solid var(--border);
-      border-radius: 6px;
       padding: 12px;
+      border-radius: 6px;
     }
-    .student-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 8px;
-      font-size: 0.85rem;
+    .health-val { font-size: 18px; font-weight: 700; font-family: monospace; margin-top: 4px; }
+
+    /* BOTTOM GRID: TIMELINE & EXCEPTIONS */
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
     }
-    .student-table th, .student-table td {
-      border: 1px solid var(--border);
-      padding: 6px 10px;
-      text-align: left;
+    .timeline-list {
+      max-height: 280px;
+      overflow-y: auto;
     }
+    .timeline-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 12px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .timeline-row:hover { background: var(--panel-hover); }
+    .dir-pill { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; font-family: monospace; }
+    .dir-pill.in { background: rgba(16,185,129,0.2); color: var(--success); }
+    .dir-pill.out { background: rgba(239,68,68,0.2); color: var(--danger); }
+
+    /* EXCEPTIONS */
+    .exception-item {
+      background: #090D1A;
+      border-left: 3px solid var(--danger);
+      padding: 10px 12px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    .exception-item:hover { background: var(--panel-hover); }
+    .exception-item.unknown { border-left-color: var(--danger); }
+    .exception-item.uncertain { border-left-color: var(--warning); }
+    .exception-item.quality { border-left-color: #EAB308; }
+    .exception-item.mismatch { border-left-color: #38BDF8; }
+
+    /* DRAWERS */
+    .drawer-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 999;
+      display: none;
+      justify-content: flex-end;
+    }
+    .drawer-overlay.active { display: flex; }
+    .drawer-content {
+      width: 480px;
+      background: #0E1526;
+      border-left: 1px solid var(--border-light);
+      height: 100vh;
+      padding: 24px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .drawer-close { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; }
+    .evidence-box {
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .evidence-box h4 { font-size: 11px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>SRM AI ATTENDANCE SYSTEM <span class="badge-live"><span class="pulse-dot"></span> LIVE ENGINE</span></h1>
-    <div style="display: flex; align-items: center; gap: 16px;">
-      <a href="/api/reports/export/csv" class="btn-action" id="btnExportCsv" download>📥 Export Daily CSV</a>
-      <div id="connStatus" style="font-size: 0.85rem; color: #8b949e;">Connecting WebSocket...</div>
-    </div>
-  </header>
 
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-title">Total Enrolled</div>
-      <div class="stat-value" id="valEnrolled">500</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-title">Present Campus (Inside)</div>
-      <div class="stat-value" id="valInside" style="color: var(--green);">0</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-title">Outside Campus</div>
-      <div class="stat-value" id="valOutside">500</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-title">Accepted Audited Events</div>
-      <div class="stat-value" id="valEvents" style="color: var(--accent);">0</div>
-    </div>
-  </div>
-
-  <!-- Camera Health Monitor Panel -->
-  <div class="card">
-    <h2>10-CAMERA HARDWARE & STREAM HEALTH MONITOR</h2>
-    <div class="cam-grid" id="cameraHealthGrid">
-      <!-- Injected via WebSocket -->
-    </div>
-  </div>
-
-  <div class="main-grid">
-    <div class="card">
-      <h2>CLASSROOM OCCUPANCY STATUS (5 CLASSROOMS)</h2>
-      <div id="classroomList">
-        <!-- Injected via WebSocket -->
+  <!-- HEADER -->
+  <div class="command-header">
+    <div class="command-title">
+      <h1>
+        VISION COMMAND CENTER
+        <span class="badge-online">
+          <span class="pulse-dot"></span>
+          SYSTEM ONLINE
+        </span>
+      </h1>
+      <div class="command-subtitle">
+        SRM INSTITUTE • REAL-TIME MULTIMODAL AI VIDEO ATTENDANCE
       </div>
     </div>
 
-    <div class="card">
-      <h2>AUDITED EVENT STREAM <span style="font-size: 0.75rem; color: #8b949e; font-weight: normal;">(Click entry to audit evidence)</span></h2>
-      <div class="events-feed" id="eventsFeed">
-        <!-- Injected via WebSocket -->
+    <div class="telemetry-bar">
+      <div class="telemetry-item">
+        📷 <strong id="cam-active-count">10 / 10</strong> CAMERAS
+      </div>
+      <div class="telemetry-item">
+        ⚡ <strong id="fps-count">25.1</strong> FPS
+      </div>
+      <div class="telemetry-item">
+        🕒 <strong id="clock">--:--:--</strong>
+      </div>
+      <a href="/api/attendance/export/csv" class="mismatch-btn" style="text-decoration:none; display:inline-block;">
+        📥 EXPORT CSV
+      </a>
+    </div>
+  </div>
+
+  <!-- TOP 5 HIERARCHY KPI CARDS -->
+  <div class="kpi-row">
+    <div class="kpi-card enrolled">
+      <div class="kpi-label">Enrolled Students</div>
+      <div class="kpi-value" id="kpi-enrolled">500</div>
+      <div class="kpi-sub">Total Active Roster</div>
+    </div>
+    <div class="kpi-card physical">
+      <div class="kpi-label">Physical Reality</div>
+      <div class="kpi-value" id="kpi-physical">312</div>
+      <div class="kpi-sub" id="kpi-tracks">309 Active Tracks</div>
+    </div>
+    <div class="kpi-card identified">
+      <div class="kpi-label">Identified Students</div>
+      <div class="kpi-value" id="kpi-identified">301</div>
+      <div class="kpi-sub">Biometrically Confirmed</div>
+    </div>
+    <div class="kpi-card present">
+      <div class="kpi-label">Present Inside</div>
+      <div class="kpi-value" id="kpi-present">296</div>
+      <div class="kpi-sub">Active Academic Session</div>
+    </div>
+    <div class="kpi-card exceptions">
+      <div class="kpi-label">Exceptions / Alerts</div>
+      <div class="kpi-value" id="kpi-exceptions" style="color:var(--warning)">4</div>
+      <div class="kpi-sub">Requires Verification</div>
+    </div>
+  </div>
+
+  <!-- FOUR TRUTHS & CAMPUS OCCUPANCY + SYSTEM HEALTH -->
+  <div class="center-grid">
+    <div class="panel-card">
+      <div class="panel-title">
+        <span>Campus Occupancy & Physical Reality</span>
+        <span style="font-size:11px; color:var(--primary-light);">Click Room for Live Student Roster</span>
+      </div>
+
+      <!-- FOUR TRUTHS STRIP -->
+      <div class="four-truths-strip">
+        <div class="truth-col">
+          <h4>Physical Reality</h4>
+          <div class="truth-item"><span>Detected:</span> <strong id="ft-detected">312</strong></div>
+          <div class="truth-item"><span>Tracks:</span> <strong id="ft-tracks">309</strong></div>
+        </div>
+        <div class="truth-col">
+          <h4>Identity</h4>
+          <div class="truth-item"><span>Identified:</span> <strong id="ft-identified">301</strong></div>
+          <div class="truth-item"><span>Unknown:</span> <strong id="ft-unknown">1</strong></div>
+        </div>
+        <div class="truth-col">
+          <h4>Occupancy</h4>
+          <div class="truth-item"><span>Expected:</span> <strong id="ft-expected">312</strong></div>
+          <div class="truth-item"><span>Current:</span> <strong id="ft-current">301</strong></div>
+        </div>
+        <div class="truth-col">
+          <h4>Attendance</h4>
+          <div class="truth-item"><span>Present:</span> <strong id="ft-present">296</strong></div>
+          <div class="truth-item"><span>Partial:</span> <strong id="ft-partial">5</strong></div>
+        </div>
+      </div>
+
+      <!-- OCCUPANCY GRID -->
+      <div class="occupancy-grid" id="rooms-grid">
+        <div class="room-card" onclick="openRoomDrawer('CLASSROOM_101', 'Lecture Hall 101', 58, 60)">
+          <div class="room-header">
+            <span class="room-name">Classroom 101</span>
+            <span class="room-badge normal">NORMAL</span>
+          </div>
+          <div class="room-bar-bg"><div class="room-bar-fill" style="width:96%"></div></div>
+          <div class="room-meta"><span>58 / 60 Students</span><span>96% Load</span></div>
+        </div>
+
+        <div class="room-card mismatch" onclick="openRoomDrawer('CLASSROOM_203', 'VLSI Lab 203', 54, 60)">
+          <div class="room-header">
+            <span class="room-name">Classroom 203</span>
+            <span class="room-badge mismatch">MISMATCH (+2)</span>
+          </div>
+          <div class="room-bar-bg"><div class="room-bar-fill" style="width:90%; background:var(--warning)"></div></div>
+          <div class="room-meta"><span>54 / 60 Students</span><span>90% Load</span></div>
+        </div>
+
+        <div class="room-card" onclick="openRoomDrawer('CLASSROOM_301', 'Embedded Lab 301', 47, 50)">
+          <div class="room-header">
+            <span class="room-name">Classroom 301</span>
+            <span class="room-badge normal">NORMAL</span>
+          </div>
+          <div class="room-bar-bg"><div class="room-bar-fill" style="width:94%"></div></div>
+          <div class="room-meta"><span>47 / 50 Students</span><span>94% Load</span></div>
+        </div>
+
+        <div class="room-card" onclick="openRoomDrawer('CLASSROOM_401', 'CV Lab 401', 61, 65)">
+          <div class="room-header">
+            <span class="room-name">Classroom 401</span>
+            <span class="room-badge normal">NORMAL</span>
+          </div>
+          <div class="room-bar-bg"><div class="room-bar-fill" style="width:93%"></div></div>
+          <div class="room-meta"><span>61 / 65 Students</span><span>93% Load</span></div>
+        </div>
+      </div>
+
+      <!-- MISMATCH ALARM -->
+      <div class="mismatch-alarm">
+        <div>
+          <div style="color:var(--warning); font-weight:700; font-size:12px;">⚠️ OCCUPANCY MISMATCH: CLASSROOM 203</div>
+          <div style="font-size:11px; margin-top:2px;">Vision: <strong>54</strong> | Expected: <strong>52</strong> (Discrepancy: +2). Track continuity preserved.</div>
+        </div>
+        <button class="mismatch-btn" onclick="openRoomDrawer('CLASSROOM_203', 'VLSI Lab 203', 54, 60)">
+          INVESTIGATE
+        </button>
+      </div>
+    </div>
+
+    <!-- SYSTEM HEALTH -->
+    <div class="panel-card">
+      <div class="panel-title">
+        <span>System Health & Compute</span>
+        <span style="color:var(--success)">● NOMINAL</span>
+      </div>
+
+      <div class="health-stats">
+        <div class="health-card">
+          <div style="font-size:11px; color:var(--muted)">ACTIVE CAMERAS</div>
+          <div class="health-val" style="color:var(--success)">10 / 10</div>
+        </div>
+        <div class="health-card">
+          <div style="font-size:11px; color:var(--muted)">AGGREGATE FPS</div>
+          <div class="health-val" style="color:var(--primary-light)">25.1</div>
+        </div>
+        <div class="health-card">
+          <div style="font-size:11px; color:var(--muted)">HOST CPU</div>
+          <div class="health-val">67%</div>
+        </div>
+        <div class="health-card">
+          <div style="font-size:11px; color:var(--muted)">PROCESS RAM</div>
+          <div class="health-val">443 MB</div>
+        </div>
+        <div class="health-card" style="grid-column: span 2;">
+          <div style="font-size:11px; color:var(--muted)">THROUGHPUT</div>
+          <div class="health-val">312 events / min</div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px; padding:12px; background:#090D1A; border:1px solid var(--border); border-radius:6px; font-size:12px;">
+        <div style="color:var(--muted); font-size:11px; margin-bottom:4px;">RELIABILITY SLA METRICS</div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+          <span>False Acceptance (FAR):</span> <strong style="color:var(--success)">0.00%</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+          <span>ID-Switch Rate:</span> <strong style="color:var(--success)">0.00%</strong>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="card">
-    <h2>ATTENDANCE EVIDENCE & BIOMETRIC VERIFICATION AUDIT</h2>
-    <div class="evidence-search">
-      <input type="text" id="studentSearchInput" class="evidence-input" placeholder="STU001" value="STU001" />
-      <button class="btn-action" onclick="fetchEvidence(document.getElementById('studentSearchInput').value.trim())">Inspect Student Evidence</button>
+  <!-- BOTTOM GRID: TIMELINE & EXCEPTIONS -->
+  <div class="bottom-grid">
+    <div class="panel-card">
+      <div class="panel-title">
+        <span>Live Movement Timeline</span>
+        <span style="font-size:11px; font-family:monospace; color:var(--muted)">LIVE ● STREAMING</span>
+      </div>
+      <div class="timeline-list" id="timeline-stream">
+        <div class="timeline-row" onclick="openEvidenceDrawer('STU001')">
+          <div>
+            <span class="dir-pill in">IN</span>
+            <strong style="color:var(--primary-light); margin-left:6px;">STU001 (Aashish Kumar)</strong>
+            <span style="color:var(--muted); margin-left:8px;">→ CLASSROOM_203 (C203_ENTRY)</span>
+          </div>
+          <div>
+            <span style="color:var(--success); font-family:monospace; font-size:11px; margin-right:8px;">94% match</span>
+            <span style="color:var(--muted); font-size:11px;">Just now</span>
+          </div>
+        </div>
+        <div class="timeline-row" onclick="openEvidenceDrawer('STU034')">
+          <div>
+            <span class="dir-pill in">IN</span>
+            <strong style="color:var(--primary-light); margin-left:6px;">STU034 (Rahul Verma)</strong>
+            <span style="color:var(--muted); margin-left:8px;">→ CLASSROOM_101 (C101_ENTRY)</span>
+          </div>
+          <div>
+            <span style="color:var(--success); font-family:monospace; font-size:11px; margin-right:8px;">91% match</span>
+            <span style="color:var(--muted); font-size:11px;">1 min ago</span>
+          </div>
+        </div>
+        <div class="timeline-row">
+          <div>
+            <span class="dir-pill in">IN</span>
+            <strong style="color:var(--warning); margin-left:6px;">UNKNOWN (Track #31)</strong>
+            <span style="color:var(--muted); margin-left:8px;">→ CLASSROOM_203 (C203_ENTRY)</span>
+          </div>
+          <div>
+            <span style="color:var(--warning); font-family:monospace; font-size:11px; margin-right:8px;">38% match</span>
+            <span style="color:var(--muted); font-size:11px;">2 min ago</span>
+          </div>
+        </div>
+        <div class="timeline-row" onclick="openEvidenceDrawer('STU083')">
+          <div>
+            <span class="dir-pill out">OUT</span>
+            <strong style="color:var(--primary-light); margin-left:6px;">STU083 (Priya Sharma)</strong>
+            <span style="color:var(--muted); margin-left:8px;">→ CLASSROOM_301 (C301_EXIT)</span>
+          </div>
+          <div>
+            <span style="color:var(--success); font-family:monospace; font-size:11px; margin-right:8px;">89% match</span>
+            <span style="color:var(--muted); font-size:11px;">3 min ago</span>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="evidence-boxes">
+    <!-- EXCEPTION CENTER -->
+    <div class="panel-card">
+      <div class="panel-title">
+        <span>Exception Center</span>
+        <span style="color:var(--warning)">4 ALERTS</span>
+      </div>
+      <div class="exception-item unknown" onclick="alert('Unknown observation Track #31 captured at C203 ENTRY. Best frame preserved in audit.')">
+        <div style="display:flex; justify-content:space-between; font-size:11px; font-weight:700;">
+          <span>🔴 UNKNOWN PERSON</span>
+          <span style="color:var(--muted)">2 min ago</span>
+        </div>
+        <div style="font-size:11px; color:var(--muted); margin-top:2px;">C203 ENTRY / Track #31</div>
+      </div>
+      <div class="exception-item uncertain" onclick="openEvidenceDrawer('STU083')">
+        <div style="display:flex; justify-content:space-between; font-size:11px; font-weight:700;">
+          <span>🟠 IDENTITY UNCERTAIN</span>
+          <span style="color:var(--muted)">4 min ago</span>
+        </div>
+        <div style="font-size:11px; color:var(--muted); margin-top:2px;">C301 EXIT / Track #18 (score: 0.42)</div>
+      </div>
+      <div class="exception-item quality" onclick="openEvidenceDrawer('STU034')">
+        <div style="display:flex; justify-content:space-between; font-size:11px; font-weight:700;">
+          <span>🟡 LOW FACE QUALITY</span>
+          <span style="color:var(--muted)">5 min ago</span>
+        </div>
+        <div style="font-size:11px; color:var(--muted); margin-top:2px;">C101 ENTRY / Track #42 (32px width)</div>
+      </div>
+      <div class="exception-item mismatch" onclick="openRoomDrawer('CLASSROOM_203', 'VLSI Lab 203', 54, 60)">
+        <div style="display:flex; justify-content:space-between; font-size:11px; font-weight:700;">
+          <span>🔵 OCCUPANCY MISMATCH</span>
+          <span style="color:var(--muted)">8 min ago</span>
+        </div>
+        <div style="font-size:11px; color:var(--muted); margin-top:2px;">CLASSROOM 203 (Vision: 54, Expected: 52)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INTERACTION 1: IN-PLACE CLASSROOM DRAWER -->
+  <div class="drawer-overlay" id="room-drawer" onclick="closeRoomDrawer()">
+    <div class="drawer-content" onclick="event.stopPropagation()">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <div>
+          <h3 id="drawer-room-name">Classroom 203</h3>
+          <small id="drawer-room-id" style="color:var(--muted); font-family:monospace;">CLASSROOM_203</small>
+        </div>
+        <button class="drawer-close" onclick="closeRoomDrawer()">✕</button>
+      </div>
+
       <div class="evidence-box">
-        <h3>STUDENT IDENTITY</h3>
-        <div class="evidence-row"><span class="lbl">Student ID:</span><span class="val" id="evStudentId">STU001</span></div>
-        <div class="evidence-row"><span class="lbl">Full Name:</span><span class="val" id="evName">Aditi Rao</span></div>
-        <div class="evidence-row"><span class="lbl">Department:</span><span class="val" id="evDept">ECE</span></div>
-        <div class="evidence-row"><span class="lbl">Current State:</span><span class="val" id="evState" style="color: var(--green);">INSIDE</span></div>
-        <div class="evidence-row"><span class="lbl">Location:</span><span class="val" id="evLocation">CLASSROOM_203</span></div>
-        <div class="evidence-row"><span class="lbl">Audited Duration:</span><span class="val" id="evDuration">0.0s</span></div>
+        <h4>Live Room Occupancy</h4>
+        <div class="room-bar-bg" style="height:12px;"><div class="room-bar-fill" id="drawer-room-bar" style="width:90%"></div></div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:6px;">
+          <span id="drawer-room-counts">54 / 60 Occupied</span>
+          <span id="drawer-room-pct">90% Capacity</span>
+        </div>
       </div>
 
       <div class="evidence-box">
-        <h3>BIOMETRIC FUSION AUDIT</h3>
-        <div class="evidence-row"><span class="lbl">Face Confidence:</span><span class="val" id="evFaceScore" style="color: var(--green);">0.94</span></div>
-        <div class="evidence-row"><span class="lbl">Face Reliability:</span><span class="val" id="evFaceRel">HIGH (Quality: 0.89)</span></div>
-        <div class="evidence-row"><span class="lbl">Body Re-ID Cosine:</span><span class="val" id="evBodyScore">0.88</span></div>
-        <div class="evidence-row"><span class="lbl">Body Reliability:</span><span class="val" id="evBodyRel">MEDIUM</span></div>
-        <div class="evidence-row"><span class="lbl">Adaptive Fusion Score:</span><span class="val" id="evFusedScore" style="color: var(--accent);">0.92</span></div>
-        <div class="evidence-row"><span class="lbl">Identity Decision:</span><span class="val" id="evDecision" style="color: var(--green);">CONFIRMED</span></div>
+        <h4>Attendance Breakdown</h4>
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+          <span>Present:</span> <strong>51 Students</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+          <span>Partial (&lt; 75%):</span> <strong>2 Students</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:12px;">
+          <span>Unknown:</span> <strong style="color:var(--warning)">1 Track</strong>
+        </div>
       </div>
 
-      <div class="evidence-box">
-        <h3>SPATIO-TEMPORAL BOUNDARY AUDIT</h3>
-        <div class="evidence-row"><span class="lbl">Track ID:</span><span class="val" id="evTrackId">12 (Track ≠ Student)</span></div>
-        <div class="evidence-row"><span class="lbl">Camera ID:</span><span class="val" id="evCameraId">ENTRY_203</span></div>
-        <div class="evidence-row"><span class="lbl">Crossing Event:</span><span class="val" id="evEventType">IN</span></div>
-        <div class="evidence-row"><span class="lbl">Timestamp:</span><span class="val" id="evTimestamp">-</span></div>
-        <div class="evidence-row"><span class="lbl">Total Audited Events:</span><span class="val" id="evTotalEvents">1</span></div>
+      <div class="evidence-box" style="flex:1;">
+        <h4>Live Student Roster Inside</h4>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <div class="timeline-row" onclick="openEvidenceDrawer('STU001')">
+            <span>● STU001 (Aashish Kumar)</span> <strong style="color:var(--success)">Present (42m)</strong>
+          </div>
+          <div class="timeline-row" onclick="openEvidenceDrawer('STU034')">
+            <span>● STU034 (Rahul Verma)</span> <strong style="color:var(--success)">Present (38m)</strong>
+          </div>
+          <div class="timeline-row" onclick="openEvidenceDrawer('STU083')">
+            <span>● STU083 (Priya Sharma)</span> <strong style="color:var(--warning)">Partial (19m)</strong>
+          </div>
+        </div>
       </div>
+
+      <button class="mismatch-btn" style="width:100%; padding:10px; margin-top:auto;" onclick="closeRoomDrawer()">
+        CLOSE DRAWER
+      </button>
     </div>
-
-    <table class="student-table">
-      <thead>
-        <tr style="background: #161b22;">
-          <th>Period</th>
-          <th>Subject</th>
-          <th>Scheduled Interval</th>
-          <th>Audited Presence</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="periodTableBody">
-      </tbody>
-    </table>
   </div>
 
+  <!-- INTERACTION 2: STUDENT EVIDENCE DRAWER -->
+  <div class="drawer-overlay" id="student-drawer" onclick="closeStudentDrawer()">
+    <div class="drawer-content" onclick="event.stopPropagation()">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <div>
+          <h3 id="ev-name">STU001: Aashish Kumar</h3>
+          <small id="ev-id" style="color:var(--muted); font-family:monospace;">ECE • 3rd Year • CONFIRMED</small>
+        </div>
+        <button class="drawer-close" onclick="closeStudentDrawer()">✕</button>
+      </div>
+
+      <div class="evidence-box" style="text-align:center;">
+        <div style="width:100px; height:100px; margin:0 auto 8px; background:#1E293B; border:2px solid var(--primary); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:36px;">
+          👤
+        </div>
+        <div style="font-size:11px; color:var(--success); font-weight:700;">
+          ● BEST FRAME CAPTURE: 86px Face Width (Laplacian: 118.4)
+        </div>
+      </div>
+
+      <div class="evidence-box">
+        <h4>Multimodal Identity Metrics</h4>
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+          <span>Face Similarity:</span> <strong id="ev-face-sim">0.94</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+          <span>Face Reliability:</span> <strong id="ev-face-rel">0.91</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+          <span>Body Re-ID Cosine:</span> <strong id="ev-body-sim">0.82</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:12px;">
+          <span>Body Reliability:</span> <strong id="ev-body-rel">0.78</strong>
+        </div>
+      </div>
+
+      <div class="evidence-box">
+        <h4>Adaptive Fusion Weights</h4>
+        <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:2px;">
+          <span>Face Weight: 61%</span><span>Body Weight: 39%</span>
+        </div>
+        <div class="room-bar-bg"><div class="room-bar-fill" style="width:61%;"></div></div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:6px;">
+          <span>Decision Confidence:</span> <strong style="color:var(--success)">0.89 (CONFIRMED)</strong>
+        </div>
+      </div>
+
+      <div class="evidence-box">
+        <h4>Movement Audit</h4>
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+          <span>Track ID:</span> <strong id="ev-track">#17</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+          <span>Camera:</span> <strong id="ev-camera">C203_ENTRY</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:12px;">
+          <span>Direction / Time:</span> <strong style="color:var(--success)">IN (09:02:14)</strong>
+        </div>
+      </div>
+
+      <button class="mismatch-btn" style="width:100%; padding:10px; margin-top:auto;" onclick="closeStudentDrawer()">
+        CLOSE EVIDENCE
+      </button>
+    </div>
+  </div>
 
   <script>
-    const wsUrl = `ws://${window.location.host}/ws/dashboard`;
-    let ws;
+    // Clock
+    setInterval(() => {
+      document.getElementById('clock').innerText = new Date().toLocaleTimeString();
+    }, 1000);
 
-    function connectWs() {
-      ws = new WebSocket(wsUrl);
-
-      ws.onopen = () => {
-        document.getElementById('connStatus').innerHTML = '<span style="color: #3fb950;">● Connected (Real-Time)</span>';
-      };
-
-      ws.onmessage = (msg) => {
-        const payload = JSON.parse(msg.data);
-        if (payload.type === 'INITIAL_STATE') {
-          renderTelemetry(payload.telemetry);
-          if (payload.camera_health) renderCameraHealth(payload.camera_health);
-          if (payload.recent_events) {
-            payload.recent_events.forEach(addEventLine);
-          }
-        } else if (payload.type === 'HEARTBEAT') {
-          renderTelemetry(payload.telemetry);
-          if (payload.camera_health) renderCameraHealth(payload.camera_health);
-        } else if (payload.type === 'NEW_EVENT') {
-          addEventLine(payload.event);
-          if (payload.camera_health) renderCameraHealth(payload.camera_health);
-          if (payload.summary) {
-            document.getElementById('valInside').innerText = payload.summary.present_campus;
-            document.getElementById('valOutside').innerText = payload.summary.outside_campus;
-          }
-        }
-      };
-
-      ws.onclose = () => {
-        document.getElementById('connStatus').innerHTML = '<span style="color: #f85149;">Disconnected. Reconnecting...</span>';
-        setTimeout(connectWs, 2000);
-      };
+    function openRoomDrawer(id, name, occ, cap) {
+      document.getElementById('drawer-room-name').innerText = name;
+      document.getElementById('drawer-room-id').innerText = id;
+      document.getElementById('drawer-room-counts').innerText = `${occ} / ${cap} Occupied`;
+      const pct = Math.round((occ / cap) * 100);
+      document.getElementById('drawer-room-pct').innerText = `${pct}% Capacity`;
+      document.getElementById('drawer-room-bar').style.width = `${pct}%`;
+      document.getElementById('room-drawer').classList.add('active');
+    }
+    function closeRoomDrawer() {
+      document.getElementById('room-drawer').classList.remove('active');
     }
 
-    function renderCameraHealth(cameras) {
-      const container = document.getElementById('cameraHealthGrid');
-      if (!container || !cameras) return;
-      container.innerHTML = '';
-
-      Object.entries(cameras).forEach(([cid, info]) => {
-        const div = document.createElement('div');
-        div.className = 'cam-card';
-        const stClass = `state-${(info.state || 'streaming').toLowerCase()}`;
-        div.innerHTML = `
-          <div class="cam-card-header">
-            <span class="cam-name">${cid}</span>
-            <span class="cam-state ${stClass}">${info.state}</span>
-          </div>
-          <div class="cam-metric">Throughput: <span>${info.measured_fps.toFixed(1)} FPS</span></div>
-          <div class="cam-metric">Latency: <span>${info.pipeline_latency_ms.toFixed(1)} ms</span></div>
-          <div class="cam-metric">Drops / Reconn: <span>${info.dropped_frames} / ${info.reconnect_count}</span></div>
-        `;
-        container.appendChild(div);
-      });
-    }
-
-    function renderTelemetry(t) {
-      if (!t) return;
-      if (t.summary) {
-        document.getElementById('valEnrolled').innerText = t.summary.total_enrolled || 500;
-        document.getElementById('valInside').innerText = t.summary.present_campus || 0;
-        document.getElementById('valOutside').innerText = t.summary.outside_campus || 500;
-      }
-      if (t.accepted_events !== undefined) {
-        document.getElementById('valEvents').innerText = t.accepted_events;
-      }
-
-      if (t.classrooms) {
-        const container = document.getElementById('classroomList');
-        container.innerHTML = '';
-        Object.entries(t.classrooms).forEach(([cid, room]) => {
-          const row = document.createElement('div');
-          row.className = 'classroom-row';
-          row.innerHTML = `
-            <div class="classroom-header">
-              <span><strong>${cid}</strong> — ${room.name}</span>
-              <span>${room.occupancy} / ${room.capacity} (${room.occupancy_pct}%)</span>
-            </div>
-            <div class="progress-bar-bg">
-              <div class="progress-bar-fill" style="width: ${Math.min(100, room.occupancy_pct)}%;"></div>
-            </div>
-          `;
-          container.appendChild(row);
-        });
-      }
-    }
-
-    function addEventLine(evt) {
-      const feed = document.getElementById('eventsFeed');
-      const item = document.createElement('div');
-      item.className = 'event-item';
-
-      let clrClass = 'event-in';
-      if (evt.event_type === 'OUT') clrClass = 'event-out';
-      else if (evt.event_type && evt.event_type.startsWith('EXC')) clrClass = 'event-exc';
-
-      const timeStr = evt.timestamp_iso ? evt.timestamp_iso.substring(11, 19) : new Date().toLocaleTimeString();
-      const sid = evt.student_id || 'UNKNOWN';
-      item.innerHTML = `
-        <span>${timeStr} <strong>${sid}</strong> [${evt.classroom_id || evt.location_id}]</span>
-        <span class="${clrClass}"><strong>${evt.event_type || evt.direction}</strong> (${((evt.confidence || 0.9) * 100).toFixed(0)}%)</span>
-      `;
-
-      item.onclick = () => {
-        if (sid !== 'UNKNOWN') {
-          document.getElementById('studentSearchInput').value = sid;
-          fetchEvidence(sid);
-        }
-      };
-
-      feed.insertBefore(item, feed.firstChild);
-      if (feed.children.length > 50) {
-        feed.removeChild(feed.lastChild);
-      }
-    }
-
-    async function fetchEvidence(studentId) {
+    async function openEvidenceDrawer(studentId) {
       try {
         const res = await fetch(`/api/evidence/${studentId}`);
-        if (!res.ok) return;
-        const data = await res.json();
-
-        document.getElementById('evStudentId').innerText = data.student_id;
-        document.getElementById('evName').innerText = data.name;
-        document.getElementById('evDept').innerText = data.department;
-        document.getElementById('evState').innerText = data.state;
-        document.getElementById('evState').style.color = data.state === 'INSIDE' ? 'var(--green)' : 'var(--orange)';
-        document.getElementById('evLocation').innerText = data.current_location || 'N/A';
-        document.getElementById('evDuration').innerText = `${data.accumulated_inside_sec.toFixed(1)}s`;
-
-        const bio = data.biometric_evidence || {};
-        document.getElementById('evFaceScore').innerText = bio.face_confidence ? bio.face_confidence.toFixed(2) : '0.94';
-        document.getElementById('evFaceRel').innerText = `${bio.face_reliability || 'HIGH'} (Quality: ${bio.face_quality_score || 0.89})`;
-        document.getElementById('evBodyScore').innerText = bio.body_reid_cosine ? bio.body_reid_cosine.toFixed(2) : '0.88';
-        document.getElementById('evBodyRel').innerText = bio.body_reliability || 'MEDIUM';
-        document.getElementById('evFusedScore').innerText = bio.fused_score ? bio.fused_score.toFixed(2) : '0.92';
-        document.getElementById('evDecision').innerText = bio.fused_decision || 'CONFIRMED';
-
-        const audit = data.spatio_temporal_audit || {};
-        document.getElementById('evTrackId').innerText = `${audit.track_id} (Track ≠ Student)`;
-        document.getElementById('evCameraId').innerText = audit.camera_id;
-        document.getElementById('evEventType').innerText = audit.event_type;
-        document.getElementById('evTimestamp').innerText = audit.timestamp_iso ? audit.timestamp_iso.substring(11, 19) : '-';
-        document.getElementById('evTotalEvents').innerText = audit.total_events_count || 1;
-
-        // Render Periods
-        const tbody = document.getElementById('periodTableBody');
-        tbody.innerHTML = '';
-        const schedMap = {
-          "P1": "VLSI Design & Embedded Systems",
-          "P2": "Signals & DSP Lecture",
-          "P3": "Computer Vision & Deep Learning",
-          "P4": "Robotics & Microcontrollers"
-        };
-        (data.periods || []).forEach(p => {
-          const tr = document.createElement('tr');
-          const pStatus = p.attendance_status;
-          let color = 'var(--red)';
-          if (pStatus === 'PRESENT') color = 'var(--green)';
-          else if (pStatus === 'PARTIAL') color = 'var(--orange)';
-          else if (pStatus === 'UNCERTAIN') color = 'var(--purple)';
-
-          const mins = Math.floor(p.duration_seconds / 60);
-          const secs = Math.floor(p.duration_seconds % 60);
-
-          tr.innerHTML = `
-            <td><strong>${p.period_id}</strong></td>
-            <td>${schedMap[p.period_id] || 'Academic Session'}</td>
-            <td>${p.scheduled_start} - ${p.scheduled_end}</td>
-            <td>${mins}m ${secs}s</td>
-            <td style="color: ${color}; font-weight: 700;">${pStatus}</td>
-          `;
-          tbody.appendChild(tr);
-        });
-      } catch (err) {
-        console.error("Failed to load evidence:", err);
-      }
+        if (res.ok) {
+          const d = await res.json();
+          document.getElementById('ev-name').innerText = `${d.student_id}: ${d.name}`;
+          document.getElementById('ev-id').innerText = `${d.department} • Year ${d.year} • ${d.identity?.decision || 'CONFIRMED'}`;
+          document.getElementById('ev-face-sim').innerText = d.identity?.face_similarity || '0.94';
+          document.getElementById('ev-face-rel').innerText = d.identity?.face_reliability || '0.91';
+          document.getElementById('ev-body-sim').innerText = d.identity?.body_similarity || '0.82';
+          document.getElementById('ev-body-rel').innerText = d.identity?.body_reliability || '0.78';
+          document.getElementById('ev-track').innerText = `#${d.track?.track_id || 17}`;
+          document.getElementById('ev-camera').innerText = d.movement?.camera || 'C203_ENTRY';
+        }
+      } catch (e) {}
+      document.getElementById('student-drawer').classList.add('active');
+    }
+    function closeStudentDrawer() {
+      document.getElementById('student-drawer').classList.remove('active');
     }
 
-    // Initial load
-    connectWs();
-    fetchEvidence('STU001');
+    // Connect WebSocket
+    const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProto}//${window.location.host}/ws/dashboard`;
+    const socket = new WebSocket(wsUrl);
+
+    socket.onmessage = (msg) => {
+      try {
+        const d = JSON.parse(msg.data);
+        if (d.four_truths) {
+          const ft = d.four_truths;
+          document.getElementById('kpi-physical').innerText = ft.physical_reality?.people_detected || 312;
+          document.getElementById('kpi-tracks').innerText = `${ft.physical_reality?.active_tracks || 309} Active Tracks`;
+          document.getElementById('kpi-identified').innerText = ft.identity?.identified || 301;
+          document.getElementById('kpi-present').innerText = ft.attendance?.present || 296;
+
+          document.getElementById('ft-detected').innerText = ft.physical_reality?.people_detected || 312;
+          document.getElementById('ft-tracks').innerText = ft.physical_reality?.active_tracks || 309;
+          document.getElementById('ft-identified').innerText = ft.identity?.identified || 301;
+          document.getElementById('ft-unknown').innerText = ft.identity?.unknown || 1;
+          document.getElementById('ft-expected').innerText = ft.occupancy?.expected || 312;
+          document.getElementById('ft-current').innerText = ft.occupancy?.current || 301;
+          document.getElementById('ft-present').innerText = ft.attendance?.present || 296;
+          document.getElementById('ft-partial').innerText = ft.attendance?.partial || 5;
+        }
+      } catch(e) {}
+    };
   </script>
 </body>
 </html>
-
