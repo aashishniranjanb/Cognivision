@@ -8,6 +8,8 @@ import {
     getClassrooms,
     AI_WS_URL
 } from "../services/api";
+import AnimatedCounter from "../components/AnimatedCounter";
+import AnalyticsCharts from "../components/AnalyticsCharts";
 
 function Dashboard() {
     // Top 5 Hierarchy KPI State
@@ -270,31 +272,31 @@ function Dashboard() {
             <div className="kpi-row">
                 <div className="kpi-card enrolled">
                     <div className="kpi-label">Enrolled Students</div>
-                    <div className="kpi-value">{kpis.enrolled}</div>
+                    <div className="kpi-value"><AnimatedCounter value={kpis.enrolled} /></div>
                     <div className="kpi-sub">Total Active Roster</div>
                 </div>
 
                 <div className="kpi-card physical">
                     <div className="kpi-label">Physical Reality</div>
-                    <div className="kpi-value">{kpis.physical}</div>
-                    <div className="kpi-sub">{kpis.activeTracks} Active Tracks</div>
+                    <div className="kpi-value"><AnimatedCounter value={kpis.physical} /></div>
+                    <div className="kpi-sub"><AnimatedCounter value={kpis.activeTracks} /> Active Tracks</div>
                 </div>
 
                 <div className="kpi-card identified">
                     <div className="kpi-label">Identified Students</div>
-                    <div className="kpi-value">{kpis.identified}</div>
+                    <div className="kpi-value"><AnimatedCounter value={kpis.identified} /></div>
                     <div className="kpi-sub">Biometrically Confirmed</div>
                 </div>
 
                 <div className="kpi-card present">
                     <div className="kpi-label">Present Inside</div>
-                    <div className="kpi-value">{kpis.present}</div>
+                    <div className="kpi-value"><AnimatedCounter value={kpis.present} /></div>
                     <div className="kpi-sub">Active Academic Session</div>
                 </div>
 
                 <div className="kpi-card exceptions">
                     <div className="kpi-label">Exceptions / Alerts</div>
-                    <div className="kpi-value" style={{ color: "var(--warning)" }}>{kpis.exceptions}</div>
+                    <div className="kpi-value" style={{ color: "var(--warning)" }}><AnimatedCounter value={kpis.exceptions} /></div>
                     <div className="kpi-sub">Requires Verification</div>
                 </div>
             </div>
@@ -443,8 +445,11 @@ function Dashboard() {
                 </div>
             </div>
 
-            {/* 4. LIVE MOVEMENT TIMELINE & DEDICATED EXCEPTION CENTER */}
-            <div className="bottom-grid">
+            {/* 4. ANALYTICS & TREND VISUALIZATIONS (TASK 2.2) */}
+            <AnalyticsCharts />
+
+            {/* 5. LIVE MOVEMENT TIMELINE & DEDICATED EXCEPTION CENTER */}
+            <div className="bottom-grid" style={{ marginTop: "24px" }}>
                 {/* LIVE MOVEMENT TIMELINE */}
                 <div className="panel-card">
                     <div className="panel-title">
