@@ -26,6 +26,9 @@ from app.integration.spring_backend_adapter import default_spring_adapter
 from app.counting.occupancy_reconciler import OccupancyReconciler
 from app.counting.count_metrics import compute_campus_kpis
 from app.attendance.attendance_reconciler import AttendanceReconciler
+from app.counting.loss_analyzer import FunnelLossAnalyzer
+from app.camera.camera_survey import CameraSurveyEngine, CameraSurveyProfile
+import psutil
 from app.backend.schemas import (
     StudentProfileResponse,
     ClassroomStatusResponse,
@@ -33,7 +36,11 @@ from app.backend.schemas import (
     ManualEventRequest
 )
 
-app = FastAPI(title="SRM AI Attendance System API", version="1.0.0")
+SERVER_START_TIME = time.time()
+funnel_loss_analyzer = FunnelLossAnalyzer()
+camera_survey_engine = CameraSurveyEngine()
+
+app = FastAPI(title="SRM AI Attendance System API", version="1.2.0")
 
 def _find_campus_config() -> str:
     this_file = Path(__file__).resolve()
@@ -94,6 +101,74 @@ async def get_classrooms():
 async def get_camera_health():
     """Returns live health, FPS, and status for all 10 cameras across campus."""
     return default_health_monitor.get_all_health()
+
+@app.get("/health")
+async def health_check():
+    """Liveness probe for deployment and load balancer health checks."""
+    return {
+        "status": "UP",
+        "service": "ai-service",
+        "version": "1.2.0",
+        "timestamp_iso": datetime.now().isoformat()
+    }
+
+@app.get("/api/system/status")
+async def get_system_status():
+    """Comprehensive system telemetry: backend, SQLite database, cameras, and host resources."""
+    proc = psutil.Process(os.getpid())
+    db_healthy = True
+    try:
+        attendance_repo.get_recent_events(limit=1)
+    except Exception:
+        db_healthy = False
+
+    cam_health = default_health_monitor.get_all_health()
+    active_cams = sum(1 for c in cam_health.values() if c.get("status") == "HEALTHY")
+
+    return {
+        "status": "HEALTHY" if db_healthy else "DEGRADED",
+        "uptime_seconds": round(time.time() - SERVER_START_TIME, 1),
+        "database": {"connected": db_healthy, "engine": "sqlite"},
+        "websocket": {"active_connections": len(active_connections)},
+        "cameras": {
+            "total": len(cam_health),
+            "healthy": active_cams
+        },
+        "system_resources": {
+            "ram_mb": round(proc.memory_info().rss / (1024 * 1024), 1),
+            "cpu_percent": proc.cpu_percent()
+        }
+    }
+
+@app.get("/api/campus/loss_analysis")
+async def get_campus_loss_analysis(cohort_size: int = 100):
+    """Returns detailed forensic loss funnel analysis explaining every lost student."""
+    return funnel_loss_analyzer.analyze_cohort(cohort_size).to_dict()
+
+@app.get("/api/students/{student_id}/evidence_chain")
+async def get_student_evidence_chain(student_id: str):
+    """Returns end-to-end multi-stage evidence chain for a specific student."""
+    chain = funnel_loss_analyzer.get_student_evidence_chain(student_id)
+    if not chain:
+        raise HTTPException(status_code=404, detail=f"Evidence chain for {student_id} not found")
+    return chain.to_dict()
+
+@app.get("/api/cameras/survey")
+async def get_all_cameras_survey():
+    """Returns physical installation survey and capture corridor calibration across all campus cameras."""
+    return camera_survey_engine.validate_all_campus_cameras()
+
+@app.get("/api/cameras/{camera_id}/survey")
+async def get_camera_survey(camera_id: str):
+    """Returns physical survey profile and validation for a specific camera."""
+    if camera_id not in camera_survey_engine.profiles:
+        raise HTTPException(status_code=404, detail=f"Camera survey profile for {camera_id} not found")
+    profile = camera_survey_engine.profiles[camera_id]
+    validation = camera_survey_engine.survey_camera(profile)
+    return {
+        "profile": profile.to_dict(),
+        "validation": validation.to_dict()
+    }
 
 # Face & Biometric Recognition singletons
 face_detector = FaceDetector()

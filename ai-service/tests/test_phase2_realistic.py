@@ -39,9 +39,34 @@ def test_attendance_integrity_funnel():
     assert report.false_acceptance_rate == 0.0
 
 def test_phase2_progression():
-    steps = benchmark_phase2_progression()
+    steps = benchmark_phase2_progression(max_scale=500)
     assert len(steps) == 5
     scales = [s.students for s in steps]
     assert scales == [100, 200, 300, 400, 500]
     cameras = [s.cameras for s in steps]
     assert cameras == [2, 4, 6, 8, 10]
+
+def test_scale_step_600_plus():
+    res600 = run_scale_step(students=600, cameras=12, tracks=420, iterations=10)
+    assert res600.students == 600
+    assert res600.cameras == 12
+    assert res600.active_tracks == 420
+    assert res600.fps_per_camera >= 18.0
+    assert res600.dropped_frames == 0
+    assert res600.false_accepts == 0
+    assert res600.ram_mb < 800.0
+
+    res800 = run_scale_step(students=800, cameras=16, tracks=560, iterations=10)
+    assert res800.students == 800
+    assert res800.cameras == 16
+    assert res800.active_tracks == 560
+    assert res800.fps_per_camera >= 15.0
+    assert res800.dropped_frames == 0
+    assert res800.false_accepts == 0
+
+def test_phase2_progression_600_plus():
+    steps = benchmark_phase2_progression(max_scale=800)
+    assert len(steps) == 8
+    scales = [s.students for s in steps]
+    assert scales == [100, 200, 300, 400, 500, 600, 700, 800]
+    assert steps[-1].students == 800

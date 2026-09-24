@@ -141,28 +141,34 @@ def run_scale_step(
         occupancy_mismatch=0
     )
 
-def benchmark_phase2_progression() -> List[ScaleStepResult]:
-    """Runs 100 -> 200 -> 300 -> 400 -> 500 scale steps."""
+def benchmark_phase2_progression(max_scale: int = 500) -> List[ScaleStepResult]:
+    """Runs progressive scale benchmark up to 500 or 600+ students (600, 700, 800)."""
     configs = [
         (100, 2, 70),
         (200, 4, 140),
         (300, 6, 210),
         (400, 8, 280),
-        (500, 10, 350)
+        (500, 10, 350),
+        (600, 12, 420),
+        (700, 14, 490),
+        (800, 16, 560)
     ]
-    results = []
-    print("=" * 72)
-    print(" PHASE-II SCALE TEST (100 -> 500 STUDENTS)")
-    print("=" * 72)
-    print(f"{'Students':<10} | {'Cameras':<8} | {'Tracks':<8} | {'FPS/cam':<10} | {'RAM (MB)':<10} | {'Event Latency':<12}")
-    print("-" * 72)
+    # Filter by max_scale
+    active_configs = [c for c in configs if c[0] <= max_scale]
 
-    for students, cameras, tracks in configs:
+    results = []
+    print("=" * 76)
+    print(f" PHASE-II SCALE TEST (100 -> {max_scale} STUDENTS — 600+ PRODUCTION CHECK)")
+    print("=" * 76)
+    print(f"{'Students':<10} | {'Cameras':<8} | {'Tracks':<8} | {'FPS/cam':<10} | {'RAM (MB)':<10} | {'Event Latency':<12}")
+    print("-" * 76)
+
+    for students, cameras, tracks in active_configs:
         res = run_scale_step(students, cameras, tracks)
         results.append(res)
         print(f"{res.students:<10} | {res.cameras:<8} | {res.active_tracks:<8} | {res.fps_per_camera:<10} | {res.ram_mb:<10} | {res.event_latency_ms:<10} ms")
 
-    print("=" * 72)
+    print("=" * 76)
     return results
 
 def benchmark_attendance_integrity(n_students: int = 100) -> AttendanceIntegrityReport:
