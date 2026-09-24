@@ -8,6 +8,7 @@ export default function Layout({ children }) {
         { href: "/", label: "Dashboard", icon: "▦" },
         { href: "/live", label: "Live Monitoring", icon: "◉" },
         { href: "/students", label: "Students", icon: "👥" },
+        { href: "/enroll", label: "Biometric Studio", icon: "👤" },
         { href: "/classrooms", label: "Classrooms", icon: "🏢" },
         { href: "/cameras", label: "Cameras", icon: "📷" },
         { href: "/reports", label: "Reports", icon: "📄" },
