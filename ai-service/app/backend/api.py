@@ -35,12 +35,24 @@ from app.backend.schemas import (
     CampusSummaryResponse,
     ManualEventRequest
 )
+from app.biometrics import (
+    BiometricRepository,
+    StudentCreate,
+    StudentUpdate,
+    StudentResponse,
+    BiometricProfileBase,
+    BiometricProfileResponse,
+    EmbeddingVariantCreate,
+    EmbeddingVariantResponse,
+    StudentDetailResponse,
+    run_migration
+)
 
 SERVER_START_TIME = time.time()
 funnel_loss_analyzer = FunnelLossAnalyzer()
 camera_survey_engine = CameraSurveyEngine()
 
-app = FastAPI(title="SRM AI Attendance System API", version="1.2.0")
+app = FastAPI(title="SRM AI Attendance System API", version="1.3.0")
 
 def _find_campus_config() -> str:
     this_file = Path(__file__).resolve()
@@ -56,8 +68,14 @@ def _find_campus_config() -> str:
     return "configs/campus/campus_config.json"
 
 # Shared singletons
+biometric_repo = BiometricRepository()
+try:
+    run_migration()
+except Exception as _mig_err:
+    print(f"[API] Initial biometrics migration notice: {_mig_err}")
+
 attendance_repo = AttendanceRepository()
-student_repo = StudentRepository()
+student_repo = StudentRepository(biometric_repo=biometric_repo)
 campus_manager = CampusManager(_find_campus_config())
 report_service = ReportService(
     attendance_repo=attendance_repo,
@@ -544,6 +562,81 @@ async def get_student_evidence(student_id: str):
         },
         "periods": [p.to_dict() for p in periods]
     }
+
+# ==============================================================================
+# SPRINT A — BIOMETRIC DATABASE & STUDENT CRUD APIS
+# ==============================================================================
+@app.get("/api/students", response_model=List[StudentResponse])
+async def list_students(
+    search: Optional[str] = Query(None, description="Search by name, ID, or register number"),
+    department: Optional[str] = Query(None, description="Filter by department"),
+    year: Optional[int] = Query(None, description="Filter by year (1-5)"),
+    status: Optional[str] = Query(None, description="Filter by status (ACTIVE, INACTIVE, etc.)"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=1000)
+):
+    return biometric_repo.list_students(
+        search=search, department=department, year=year, status=status, skip=skip, limit=limit
+    )
+
+@app.post("/api/students", response_model=StudentResponse, status_code=201)
+async def create_student(student_in: StudentCreate):
+    existing = biometric_repo.get_student(student_in.student_id)
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Student {student_in.student_id} already exists")
+    created = biometric_repo.create_student(student_in)
+    return created
+
+@app.get("/api/students/{student_id}/detail", response_model=StudentDetailResponse)
+async def get_student_detail(student_id: str):
+    detail = biometric_repo.get_student_detail(student_id)
+    if not detail:
+        raise HTTPException(status_code=404, detail="Student not found")
+    return detail
+
+@app.put("/api/students/{student_id}", response_model=StudentResponse)
+async def update_student(student_id: str, student_in: StudentUpdate):
+    updated = biometric_repo.update_student(student_id, student_in)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Student not found")
+    return updated
+
+@app.delete("/api/students/{student_id}")
+async def delete_student(student_id: str):
+    success = biometric_repo.delete_student(student_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Student not found")
+    return {"status": "SUCCESS", "message": f"Student {student_id} deleted"}
+
+@app.get("/api/students/{student_id}/profile", response_model=BiometricProfileResponse)
+async def get_student_biometric_profile(student_id: str):
+    profile = biometric_repo.get_biometric_profile(student_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Biometric profile not found")
+    return profile
+
+@app.get("/api/students/{student_id}/variants", response_model=List[EmbeddingVariantResponse])
+async def list_student_variants(student_id: str):
+    return biometric_repo.list_variants(student_id)
+
+@app.post("/api/students/{student_id}/variants", response_model=EmbeddingVariantResponse, status_code=201)
+async def add_student_variant(student_id: str, variant_in: EmbeddingVariantCreate):
+    student = biometric_repo.get_student(student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    return biometric_repo.add_variant(student_id, variant_in)
+
+@app.delete("/api/students/{student_id}/variants/{variant_id}")
+async def delete_student_variant(student_id: str, variant_id: int):
+    success = biometric_repo.delete_variant(variant_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Variant not found")
+    return {"status": "SUCCESS", "message": f"Variant {variant_id} deleted"}
+
+@app.post("/api/students/migrate")
+async def trigger_student_migration():
+    result = run_migration()
+    return result
 
 @app.get("/api/students/{student_id}", response_model=StudentProfileResponse)
 async def get_student_profile(student_id: str):
