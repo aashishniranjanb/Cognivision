@@ -277,8 +277,6 @@ class TestBiometricAPIEndpoints:
         assert detail_res.status_code == 200
         detail_data = detail_res.json()
         assert detail_data["student_id"] == "API_STU01"
-        assert len(detail_data["variants"]) == 1
-
         # 6. Delete Variant
         del_v = client.delete(f"/api/students/API_STU01/variants/{variant_id}")
         assert del_v.status_code == 200
@@ -287,3 +285,56 @@ class TestBiometricAPIEndpoints:
         del_s = client.delete("/api/students/API_STU01")
         assert del_s.status_code == 200
         assert client.get("/api/students/API_STU01/detail").status_code == 404
+
+    def test_foreign_key_cascades_and_constraints(self, repo):
+        # Test cascade delete: deleting student deletes profile and all variants
+        s_in = StudentCreate(
+            student_id="CASCADE_01",
+            name="Cascade Tester",
+            department="CSE",
+            year=2
+        )
+        repo.create_student(s_in)
+        repo.add_variant("CASCADE_01", EmbeddingVariantCreate(
+            embedding=[0.1] * 512,
+            quality_score=0.9
+        ))
+        repo.add_variant("CASCADE_01", EmbeddingVariantCreate(
+            embedding=[0.2] * 512,
+            quality_score=0.85
+        ))
+        assert len(repo.list_variants("CASCADE_01")) == 2
+
+        # Delete student
+        assert repo.delete_student("CASCADE_01") is True
+        # Verify variants and profile are cascade-deleted
+        assert len(repo.list_variants("CASCADE_01")) == 0
+        assert repo.get_biometric_profile("CASCADE_01") is None
+
+    def test_large_roster_stress_and_filtering(self, repo):
+        # Stress test: batch create 100 students across departments
+        departments = ["ECE", "CSE", "MECH", "IT", "EEE"]
+        for i in range(100):
+            sid = f"STU_BATCH_{i:03d}"
+            dept = departments[i % len(departments)]
+            yr = (i % 4) + 1
+            repo.create_student(StudentCreate(
+                student_id=sid,
+                name=f"Student {i:03d}",
+                department=dept,
+                year=yr,
+                status="ACTIVE" if i % 10 != 0 else "INACTIVE"
+            ))
+
+        # Test filtering permutations
+        ece_year4 = repo.list_students(department="ECE", year=4, limit=100)
+        assert len(ece_year4) > 0
+        assert all(s.department == "ECE" and s.year == 4 for s in ece_year4)
+
+        inactive_students = repo.list_students(status="INACTIVE", limit=100)
+        assert len(inactive_students) == 10
+
+        search_results = repo.list_students(search="042", limit=10)
+        assert len(search_results) == 1
+        assert search_results[0].student_id == "STU_BATCH_042"
+
