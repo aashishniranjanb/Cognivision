@@ -62,6 +62,34 @@ class FaissIndexManager:
 
         self.load()
 
+    def add_vector(
+        self,
+        student_id: str,
+        vector: np.ndarray,
+        vector_type: str = "VARIANT",
+        pose: str = "FRONTAL",
+        quality: float = 1.0,
+        variant_id: Optional[int] = None
+    ) -> int:
+        """Dynamically appends a 512-D L2-normalized vector into the active index."""
+        arr = np.ascontiguousarray(vector.reshape(1, -1), dtype=np.float32)
+        norm = np.linalg.norm(arr)
+        if norm > 1e-6:
+            arr = arr / norm
+        self.index.add(arr)
+
+        vid = len(self.id_mapping)
+        self.id_mapping.append(student_id)
+        self.metadata.append(IndexedVectorMeta(
+            vector_id=vid,
+            student_id=student_id,
+            vector_type=vector_type,
+            variant_id=variant_id,
+            pose_type=pose,
+            quality_score=quality
+        ))
+        return vid
+
     def rebuild_index(self) -> IndexStats:
         """Rebuilds the entire FAISS index from scratch using all READY profiles and variants in SQLite."""
         new_index = faiss.IndexFlatIP(self.dim)

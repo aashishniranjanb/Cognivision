@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import axios from "axios";
 import { getStudentEvidence } from "../services/api";
+import VerificationTestModal from "../components/VerificationTestModal";
 
 export default function StudentsPage() {
     const router = useRouter();
@@ -40,6 +41,9 @@ export default function StudentsPage() {
     // Task 30: Re-enrollment modal state
     const [showReEnrollModal, setShowReEnrollModal] = useState(false);
     const [reEnrollStudent, setReEnrollStudent] = useState(null);
+
+    // Task 31: Verification test modal state
+    const [showVerifyModal, setShowVerifyModal] = useState(false);
 
     const fetchStudentsList = () => {
         axios.get("http://localhost:8000/api/students?limit=100")
@@ -254,6 +258,25 @@ export default function StudentsPage() {
                 </div>
 
                 <div className="topbar-right" style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                    <button
+                        onClick={() => setShowVerifyModal(true)}
+                        style={{
+                            padding: "8px 14px",
+                            backgroundColor: "#f0fdf4",
+                            color: "#166534",
+                            fontWeight: 700,
+                            fontSize: "12px",
+                            borderRadius: "6px",
+                            border: "1px solid #bbf7d0",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px"
+                        }}
+                    >
+                        <span>⚡</span> Test Verifier
+                    </button>
+
                     <button
                         onClick={() => {
                             setNewStudent({
@@ -952,6 +975,13 @@ export default function StudentsPage() {
                     </div>
                 </div>
             )}
+
+            {/* TASK 31: VERIFICATION TEST MODAL */}
+            <VerificationTestModal
+                isOpen={showVerifyModal}
+                onClose={() => setShowVerifyModal(false)}
+                defaultStudentId={selectedStudent}
+            />
         </div>
     );
 }
